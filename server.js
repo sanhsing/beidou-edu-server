@@ -241,15 +241,30 @@ app.get('/api/stats', async (req, res) => {
 
 app.get('/api/subjects', async (req, res) => {
   try {
-    const subjects = await dbAll(`
+    // 優先嘗試 quiz_bank（題庫表）
+    let subjects = await dbAll(`
       SELECT 
         subject as id,
         subject as name,
         COUNT(*) as node_count
-      FROM xtf_nodes
+      FROM quiz_bank
+      WHERE subject IS NOT NULL
       GROUP BY subject
       ORDER BY node_count DESC
     `);
+    
+    // 如果 quiz_bank 沒資料，嘗試 xtf_nodes_v2
+    if (!subjects || subjects.length === 0) {
+      subjects = await dbAll(`
+        SELECT 
+          subject_name as id,
+          subject_name as name,
+          COUNT(*) as node_count
+        FROM xtf_nodes_v2
+        GROUP BY subject_name
+        ORDER BY node_count DESC
+      `);
+    }
     
     res.json({ success: true, data: subjects });
   } catch (error) {
