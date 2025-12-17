@@ -83,13 +83,13 @@ router.get('/stats', async (req, res) => {
     // L1 統計
     const l1 = await dbGet('SELECT COUNT(*) as count FROM curriculum_knowledge_tree');
     
-    // L2 統計
-    const l2Total = await dbGet('SELECT COUNT(*) as count FROM quiz_bank');
+    // L2 統計 (使用 gsat_generated_questions 表)
+    const l2Total = await dbGet('SELECT COUNT(*) as count FROM gsat_generated_questions');
     const l2BySubject = await dbAll(`
-      SELECT subject, COUNT(*) as count 
-      FROM quiz_bank 
-      WHERE subject IS NOT NULL 
-      GROUP BY subject
+      SELECT subject_category as subject, COUNT(*) as count 
+      FROM gsat_generated_questions 
+      WHERE subject_category IS NOT NULL 
+      GROUP BY subject_category
     `);
     
     // L3 統計
@@ -181,14 +181,14 @@ router.get('/questions', async (req, res) => {
     
     let questions = [];
     
-    // L2 查詢
+    // L2 查詢 (使用 gsat_generated_questions 表)
     if (level === 'L2' || level === 'all') {
-      let sql = 'SELECT * FROM quiz_bank WHERE 1=1';
+      let sql = 'SELECT * FROM gsat_generated_questions WHERE 1=1';
       const params = [];
       
       if (subject) {
-        sql += ' AND subject = ?';
-        params.push(subject);
+        sql += ' AND (subject_category = ? OR subject = ?)';
+        params.push(subject, subject);
       }
       if (difficulty) {
         sql += ' AND difficulty = ?';
@@ -202,13 +202,14 @@ router.get('/questions', async (req, res) => {
       questions.push(...rows.map(row => ({
         id: row.id,
         level: 'L2',
-        subject: row.subject,
+        subject: row.subject_category || row.subject,
         node_id: row.node_id,
         question: row.question,
         options: parseJSON(row.options),
         answer: row.answer,
         explanation: row.explanation,
-        difficulty: row.difficulty
+        difficulty: row.difficulty,
+        mnemonic: row.mnemonic
       })));
     }
     
@@ -272,12 +273,12 @@ router.get('/l2', async (req, res) => {
     const { subject, node_id, difficulty, limit = 20 } = req.query;
     const maxLimit = Math.min(parseInt(limit), 100);
     
-    let sql = 'SELECT * FROM quiz_bank WHERE 1=1';
+    let sql = 'SELECT * FROM gsat_generated_questions WHERE 1=1';
     const params = [];
     
     if (subject) {
-      sql += ' AND subject = ?';
-      params.push(subject);
+      sql += ' AND (subject_category = ? OR subject = ?)';
+      params.push(subject, subject);
     }
     if (node_id) {
       sql += ' AND node_id LIKE ?';
@@ -300,13 +301,14 @@ router.get('/l2', async (req, res) => {
         questions: rows.map(row => ({
           id: row.id,
           level: 'L2',
-          subject: row.subject,
+          subject: row.subject_category || row.subject,
           node_id: row.node_id,
           question: row.question,
           options: parseJSON(row.options),
           answer: row.answer,
           explanation: row.explanation,
-          difficulty: row.difficulty
+          difficulty: row.difficulty,
+          mnemonic: row.mnemonic
         }))
       }
     });
@@ -392,22 +394,23 @@ router.post('/create', async (req, res) => {
     const maxQ = Math.min(parseInt(num_questions), 50);
     let questions = [];
     
-    // L2 題目
+    // L2 題目 (使用 gsat_generated_questions)
     if (level === 'L2' || level === 'all') {
       const l2Count = level === 'all' ? Math.ceil(maxQ * 0.6) : maxQ;
       const l2Rows = await dbAll(`
-        SELECT * FROM quiz_bank 
-        WHERE subject = ? 
+        SELECT * FROM gsat_generated_questions 
+        WHERE subject_category = ? OR subject = ?
         ORDER BY RANDOM() 
         LIMIT ?
-      `, [subject, l2Count]);
+      `, [subject, subject, l2Count]);
       
       questions.push(...l2Rows.map(row => ({
         id: row.id,
         level: 'L2',
         question: row.question,
         options: parseJSON(row.options),
-        answer: row.answer
+        answer: row.answer,
+        mnemonic: row.mnemonic
       })));
     }
     
@@ -476,7 +479,7 @@ router.post('/check', async (req, res) => {
     
     let row;
     if (level === 'L2') {
-      row = await dbGet('SELECT answer, explanation FROM quiz_bank WHERE id = ?', [question_id]);
+      row = await dbGet('SELECT answer, explanation, mnemonic FROM gsat_generated_questions WHERE id = ?', [question_id]);
     } else {
       row = await dbGet('SELECT answer, explanation FROM gsat_l3_generated WHERE id = ?', [question_id]);
     }
@@ -521,8 +524,8 @@ router.get('/path/:subject', async (req, res) => {
     
     // L2 題目
     const l2Count = await dbGet(`
-      SELECT COUNT(*) as count FROM quiz_bank WHERE subject = ?
-    `, [subject]);
+      SELECT COUNT(*) as count FROM gsat_generated_questions WHERE subject_category = ? OR subject = ?
+    `, [subject, subject]);
     
     // L3 題目
     const l3Count = await dbGet(`
@@ -580,186 +583,6 @@ router.get('/subjects', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ============================================================
-// 路由：單題查詢
-// ============================================================
-
-/**
- * GET /api/quiz/question/:id
- * 取得單題詳情
- * 
- * 支援多種題庫來源：
- * - L2: quiz_bank
- * - L3: gsat_l3_generated
- * - GSAT: gsat_generated_questions
- * 
- * Query params:
- * - source: L2 / L3 / GSAT (default: auto)
- */
-router.get('/question/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { source = 'auto' } = req.query;
-    
-    let question = null;
-    let questionSource = null;
-    
-    // 自動偵測或指定來源
-    if (source === 'auto' || source === 'GSAT') {
-      // 優先查 gsat_generated_questions
-      question = await dbGet(`
-        SELECT id, node_id, subject_category as subject, subject as topic,
-               question, options, answer, explanation, difficulty, mnemonic
-        FROM gsat_generated_questions WHERE id = ?
-      `, [id]);
-      
-      if (question) questionSource = 'GSAT';
-    }
-    
-    if (!question && (source === 'auto' || source === 'L3')) {
-      // 查 L3 素養題
-      question = await dbGet(`
-        SELECT id, node_id, subject, question_text as question,
-               options, answer, explanation, question_level as difficulty,
-               context_type, principle, context
-        FROM gsat_l3_generated WHERE id = ?
-      `, [id]);
-      
-      if (question) questionSource = 'L3';
-    }
-    
-    if (!question && (source === 'auto' || source === 'L2')) {
-      // 查 L2 基礎題
-      question = await dbGet(`
-        SELECT id, node_id, subject, question, options, answer,
-               explanation, difficulty
-        FROM quiz_bank WHERE id = ?
-      `, [id]);
-      
-      if (question) questionSource = 'L2';
-    }
-    
-    if (!question) {
-      return res.status(404).json({ 
-        success: false, 
-        error: '題目不存在',
-        searched: source === 'auto' ? ['GSAT', 'L3', 'L2'] : [source]
-      });
-    }
-    
-    // 格式化選項
-    question.options = parseJSON(question.options);
-    
-    // 取得關聯的知識節點
-    let node = null;
-    if (question.node_id) {
-      node = await dbGet(`
-        SELECT node_id, subject_name, node_name, plain, 
-               definition, understand, memorize, apply
-        FROM xtf_nodes_v2 WHERE node_id = ?
-      `, [question.node_id]);
-    }
-    
-    // 取得同節點的相關題目
-    let relatedQuestions = [];
-    if (question.node_id) {
-      relatedQuestions = await dbAll(`
-        SELECT id, question, difficulty 
-        FROM gsat_generated_questions 
-        WHERE node_id = ? AND id != ?
-        ORDER BY RANDOM() LIMIT 3
-      `, [question.node_id, id]);
-    }
-    
-    res.json({
-      success: true,
-      data: {
-        ...question,
-        source: questionSource,
-        node: node ? {
-          id: node.node_id,
-          name: node.node_name,
-          subject: node.subject_name,
-          plain: node.plain,
-          xtf: {
-            understand: node.understand,
-            memorize: node.memorize,
-            apply: node.apply
-          }
-        } : null,
-        relatedQuestions
-      }
-    });
-  } catch (err) {
-    console.error('Question detail error:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-/**
- * POST /api/quiz/batch
- * 批量取得題目詳情
- * 
- * Body:
- * - ids: [1, 2, 3, ...] 題目 ID 列表
- * - source: L2 / L3 / GSAT (default: GSAT)
- */
-router.post('/batch', async (req, res) => {
-  try {
-    const { ids, source = 'GSAT' } = req.body;
-    
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: '請提供題目 ID 列表' 
-      });
-    }
-    
-    // 限制最多 50 題
-    const limitedIds = ids.slice(0, 50);
-    const placeholders = limitedIds.map(() => '?').join(',');
-    
-    let questions = [];
-    
-    if (source === 'GSAT') {
-      questions = await dbAll(`
-        SELECT id, node_id, subject_category as subject, subject as topic,
-               question, options, answer, explanation, difficulty, mnemonic
-        FROM gsat_generated_questions WHERE id IN (${placeholders})
-      `, limitedIds);
-    } else if (source === 'L3') {
-      questions = await dbAll(`
-        SELECT id, node_id, subject, question_text as question,
-               options, answer, explanation, question_level as difficulty
-        FROM gsat_l3_generated WHERE id IN (${placeholders})
-      `, limitedIds);
-    } else if (source === 'L2') {
-      questions = await dbAll(`
-        SELECT id, node_id, subject, question, options, answer,
-               explanation, difficulty
-        FROM quiz_bank WHERE id IN (${placeholders})
-      `, limitedIds);
-    }
-    
-    // 格式化選項
-    questions = questions.map(q => ({
-      ...q,
-      options: parseJSON(q.options),
-      source
-    }));
-    
-    res.json({
-      success: true,
-      count: questions.length,
-      requested: limitedIds.length,
-      data: questions
-    });
-  } catch (err) {
-    console.error('Batch question error:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
