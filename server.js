@@ -18,6 +18,9 @@ const { connectMongoDB, getConnectionStatus } = require('./config/mongodb');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+// Trust proxy (Render 使用反向代理)
+app.set('trust proxy', 1);
+
 // ============================================================
 // 中間件
 // ============================================================
