@@ -83,11 +83,11 @@ router.get('/stats', async (req, res) => {
     // L1 統計
     const l1 = await dbGet('SELECT COUNT(*) as count FROM curriculum_knowledge_tree');
     
-    // L2 統計 (使用 gsat_generated_questions 表)
-    const l2Total = await dbGet('SELECT COUNT(*) as count FROM gsat_generated_questions');
+    // L2 統計 (使用 quiz_good_questions 表)
+    const l2Total = await dbGet('SELECT COUNT(*) as count FROM quiz_good_questions');
     const l2BySubject = await dbAll(`
       SELECT subject_category as subject, COUNT(*) as count 
-      FROM gsat_generated_questions 
+      FROM quiz_good_questions 
       WHERE subject_category IS NOT NULL 
       GROUP BY subject_category
     `);
@@ -181,9 +181,9 @@ router.get('/questions', async (req, res) => {
     
     let questions = [];
     
-    // L2 查詢 (使用 gsat_generated_questions 表)
+    // L2 查詢 (使用 quiz_good_questions 表)
     if (level === 'L2' || level === 'all') {
-      let sql = 'SELECT * FROM gsat_generated_questions WHERE 1=1';
+      let sql = 'SELECT * FROM quiz_good_questions WHERE 1=1';
       const params = [];
       
       if (subject) {
@@ -273,7 +273,7 @@ router.get('/l2', async (req, res) => {
     const { subject, node_id, difficulty, limit = 20 } = req.query;
     const maxLimit = Math.min(parseInt(limit), 100);
     
-    let sql = 'SELECT * FROM gsat_generated_questions WHERE 1=1';
+    let sql = 'SELECT * FROM quiz_good_questions WHERE 1=1';
     const params = [];
     
     if (subject) {
@@ -394,11 +394,11 @@ router.post('/create', async (req, res) => {
     const maxQ = Math.min(parseInt(num_questions), 50);
     let questions = [];
     
-    // L2 題目 (使用 gsat_generated_questions)
+    // L2 題目 (使用 quiz_good_questions)
     if (level === 'L2' || level === 'all') {
       const l2Count = level === 'all' ? Math.ceil(maxQ * 0.6) : maxQ;
       const l2Rows = await dbAll(`
-        SELECT * FROM gsat_generated_questions 
+        SELECT * FROM quiz_good_questions 
         WHERE subject_category = ? OR subject = ?
         ORDER BY RANDOM() 
         LIMIT ?
@@ -479,7 +479,7 @@ router.post('/check', async (req, res) => {
     
     let row;
     if (level === 'L2') {
-      row = await dbGet('SELECT answer, explanation, mnemonic FROM gsat_generated_questions WHERE id = ?', [question_id]);
+      row = await dbGet('SELECT answer, explanation, mnemonic FROM quiz_good_questions WHERE id = ?', [question_id]);
     } else {
       row = await dbGet('SELECT answer, explanation FROM gsat_l3_generated WHERE id = ?', [question_id]);
     }
@@ -524,7 +524,7 @@ router.get('/path/:subject', async (req, res) => {
     
     // L2 題目
     const l2Count = await dbGet(`
-      SELECT COUNT(*) as count FROM gsat_generated_questions WHERE subject_category = ? OR subject = ?
+      SELECT COUNT(*) as count FROM quiz_good_questions WHERE subject_category = ? OR subject = ?
     `, [subject, subject]);
     
     // L3 題目
@@ -594,7 +594,7 @@ router.get('/subjects', async (req, res) => {
 module.exports = router;
 
 // ============================================================
-// 新增路由：學測題庫 (gsat_generated_questions)
+// 新增路由：學測題庫 (quiz_good_questions)
 // ============================================================
 
 /**
@@ -615,7 +615,7 @@ router.get('/gsat', async (req, res) => {
     let sql = `
       SELECT id, node_id, subject_category as subject, subject as topic,
              question, options, answer, explanation, difficulty, mnemonic
-      FROM gsat_generated_questions
+      FROM quiz_good_questions
       WHERE subject_category IS NOT NULL
     `;
     const params = [];
@@ -673,7 +673,7 @@ router.get('/gsat/subjects', async (req, res) => {
   try {
     const rows = await dbAll(`
       SELECT subject_category as subject, COUNT(*) as count
-      FROM gsat_generated_questions
+      FROM quiz_good_questions
       WHERE subject_category IS NOT NULL
       GROUP BY subject_category
       ORDER BY count DESC
