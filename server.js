@@ -167,7 +167,7 @@ app.get('/api/stats', async (req, res) => {
     // 題目數 (優先嘗試 gsat_generated_questions)
     let questionsResult = await dbGet(`SELECT COUNT(*) as count FROM gsat_generated_questions`);
     if (!questionsResult || questionsResult.count === 0) {
-      questionsResult = await dbGet(`SELECT COUNT(*) as count FROM questions`);
+      questionsResult = await dbGet(`SELECT COUNT(*) as count FROM quiz_bank`);
     }
     
     // 科目數
@@ -255,9 +255,10 @@ app.get('/api/subjects', async (req, res) => {
 });
 
 // ============================================================
-// 題庫 API
+// 題庫 API - 已移至 quiz_routes.js
 // ============================================================
 
+/* 舊版 API 已移除，由 quiz_routes.js 處理
 // 隨機題目
 app.get('/api/quiz/random', async (req, res) => {
   try {
@@ -443,6 +444,7 @@ app.get('/api/knowledge/node/:nodeId', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+舊版 API 結束 */
 
 // 搜尋節點
 app.get('/api/knowledge/search', async (req, res) => {
