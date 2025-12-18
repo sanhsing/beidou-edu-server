@@ -11,7 +11,39 @@ const path = require('path');
 const ecpay = new ECPayService();
 const db = new sqlite3.Database(path.join(__dirname, '../business.db'));
 
-// 建立訂閱付款
+// 統一入口 - 建立付款 (Landing v8.0 調用)
+router.post('/create', async (req, res) => {
+  try {
+    const { userId, plan, billingCycle, promoCode } = req.body;
+    
+    if (!userId || !plan) {
+      return res.status(400).json({ error: 'Missing userId or plan' });
+    }
+
+    const payment = ecpay.createSubscriptionPayment({
+      userId, plan, billingCycle, promoCode
+    });
+
+    // 記錄待付款訂單
+    db.run(`
+      INSERT INTO pending_orders (trade_no, user_id, order_type, plan, amount, status, created_at)
+      VALUES (?, ?, 'subscription', ?, ?, 'pending', datetime('now'))
+    `, [payment.tradeNo, userId, plan, payment.amount]);
+
+    // 回傳 ECPay 表單 HTML
+    res.json({
+      success: true,
+      html: payment.html,
+      paymentUrl: payment.url,
+      tradeNo: payment.tradeNo,
+      amount: payment.amount,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 建立訂閱付款 (舊路徑保留)
 router.post('/subscribe', async (req, res) => {
   try {
     const { userId, plan, billingCycle, promoCode } = req.body;

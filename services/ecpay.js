@@ -38,16 +38,16 @@ class ECPayService {
     this.returnUrl = process.env.ECPAY_RETURN_URL || 'https://beidou-edu.onrender.com/payment-result';
     this.notifyUrl = process.env.ECPAY_NOTIFY_URL || 'https://beidou-edu.onrender.com/api/payment/callback';
     
-    // 訂閱方案價格
+    // 訂閱方案價格 (Landing v8.0)
     this.plans = {
       standard: {
         name: '標準版',
-        monthly: 99,
-        yearly: 990
+        monthly: 299,
+        yearly: 2990
       },
       pro: {
-        name: '專業版',
-        monthly: 199,
+        name: '進階版',
+        monthly: 499,
         yearly: 1990
       }
     };
