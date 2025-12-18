@@ -34,8 +34,8 @@ class ECPayService {
     // 當前使用的配置
     this.config = this.isProduction ? this.production : this.sandbox;
     
-    // 回調網址 (v2.3 修正)
-    this.returnUrl = process.env.ECPAY_RETURN_URL || 'https://beidou-landing.onrender.com/payment-result';
+    // 回調網址 (v2.5 修正 - 結果頁改由後端提供)
+    this.returnUrl = process.env.ECPAY_RETURN_URL || 'https://beidou-edu-server-1.onrender.com/payment-result.html';
     this.notifyUrl = process.env.ECPAY_NOTIFY_URL || 'https://beidou-edu-server-1.onrender.com/api/payment/callback';
     
     // 訂閱方案價格 (v8.2 早鳥價)
