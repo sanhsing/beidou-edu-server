@@ -30,11 +30,21 @@ router.post('/create', async (req, res) => {
       VALUES (?, ?, 'subscription', ?, ?, 'pending', datetime('now'))
     `, [payment.tradeNo, userId, plan, payment.amount]);
 
-    // 回傳 ECPay 表單 HTML
+    // 產生 ECPay 自動提交表單 HTML
+    const formHtml = `
+      <form id="ecpay-form" method="POST" action="${payment.url}">
+        ${Object.entries(payment.params).map(([k, v]) => 
+          `<input type="hidden" name="${k}" value="${v}">`
+        ).join('\n')}
+      </form>
+      <script>document.getElementById('ecpay-form').submit();</script>
+    `;
+
     res.json({
       success: true,
-      html: payment.html,
+      html: formHtml,
       paymentUrl: payment.url,
+      params: payment.params,
       tradeNo: payment.tradeNo,
       amount: payment.amount,
     });
