@@ -69,11 +69,69 @@ function getDb() {
         console.error('❌ SQLite 連線失敗:', err.message);
       } else {
         console.log('✅ 資料庫連線成功:', DB_PATH);
+        // 連線成功後立即建表
+        initPaymentTables(db);
       }
     });
   }
   return db;
 }
+
+// 初始化金流相關資料表
+function initPaymentTables(database) {
+  // 待付款訂單
+  database.run(`
+    CREATE TABLE IF NOT EXISTS pending_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trade_no TEXT UNIQUE NOT NULL,
+      user_id TEXT NOT NULL,
+      order_type TEXT NOT NULL,
+      plan TEXT,
+      cert_id TEXT,
+      amount INTEGER NOT NULL,
+      status TEXT DEFAULT 'pending',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      paid_at TEXT
+    )
+  `, (err) => {
+    if (err) console.error('❌ pending_orders:', err.message);
+    else console.log('✅ pending_orders 就緒');
+  });
+  
+  // 用戶訂閱
+  database.run(`
+    CREATE TABLE IF NOT EXISTS user_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT UNIQUE NOT NULL,
+      plan TEXT NOT NULL,
+      status TEXT DEFAULT 'active',
+      billing_cycle TEXT,
+      expires_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT
+    )
+  `, (err) => {
+    if (err) console.error('❌ user_subscriptions:', err.message);
+    else console.log('✅ user_subscriptions 就緒');
+  });
+  
+  // 用戶證照
+  database.run(`
+    CREATE TABLE IF NOT EXISTS user_certs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      cert_id TEXT NOT NULL,
+      purchased_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, cert_id)
+    )
+  `, (err) => {
+    if (err) console.error('❌ user_certs:', err.message);
+    else console.log('✅ user_certs 就緒');
+  });
+}
+
+// 啟動時觸發連線
+getDb();
 
 // Promise 包裝
 const dbAll = (sql, params = []) => {
@@ -93,57 +151,6 @@ const dbGet = (sql, params = []) => {
     });
   });
 };
-
-// 初始化金流相關資料表
-function initPaymentTables() {
-  const db = getDb();
-  
-  // 待付款訂單
-  db.run(`
-    CREATE TABLE IF NOT EXISTS pending_orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      trade_no TEXT UNIQUE NOT NULL,
-      user_id TEXT NOT NULL,
-      order_type TEXT NOT NULL,
-      plan TEXT,
-      cert_id TEXT,
-      amount INTEGER NOT NULL,
-      status TEXT DEFAULT 'pending',
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      paid_at TEXT
-    )
-  `);
-  
-  // 用戶訂閱
-  db.run(`
-    CREATE TABLE IF NOT EXISTS user_subscriptions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT UNIQUE NOT NULL,
-      plan TEXT NOT NULL,
-      status TEXT DEFAULT 'active',
-      billing_cycle TEXT,
-      expires_at TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT
-    )
-  `);
-  
-  // 用戶證照
-  db.run(`
-    CREATE TABLE IF NOT EXISTS user_certs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT NOT NULL,
-      cert_id TEXT NOT NULL,
-      purchased_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(user_id, cert_id)
-    )
-  `);
-  
-  console.log('✅ 金流資料表初始化完成');
-}
-
-// 啟動時初始化
-setTimeout(initPaymentTables, 1000);
 
 // ============================================================
 // 核心 API 路由
