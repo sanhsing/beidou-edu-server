@@ -34,20 +34,20 @@ class ECPayService {
     // 當前使用的配置
     this.config = this.isProduction ? this.production : this.sandbox;
     
-    // 回調網址
-    this.returnUrl = process.env.ECPAY_RETURN_URL || 'https://beidou-edu.onrender.com/payment-result';
-    this.notifyUrl = process.env.ECPAY_NOTIFY_URL || 'https://beidou-edu.onrender.com/api/payment/callback';
+    // 回調網址 (v2.3 修正)
+    this.returnUrl = process.env.ECPAY_RETURN_URL || 'https://beidou-landing.onrender.com/payment-result';
+    this.notifyUrl = process.env.ECPAY_NOTIFY_URL || 'https://beidou-edu-server-1.onrender.com/api/payment/callback';
     
-    // 訂閱方案價格 (Landing v8.0)
+    // 訂閱方案價格 (v8.2 早鳥價)
     this.plans = {
       standard: {
         name: '標準版',
-        monthly: 299,
-        yearly: 2990
+        monthly: 99,    // 早鳥價
+        yearly: 990     // 早鳥價
       },
       pro: {
         name: '進階版',
-        monthly: 499,
+        monthly: 199,   // 早鳥價
         yearly: 1990
       }
     };
