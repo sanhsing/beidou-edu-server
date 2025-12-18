@@ -58,23 +58,40 @@ app.use('/api/', limiter);
 // 資料庫連線
 // ============================================================
 
-// SQLite (題庫)
+// SQLite (題庫 - 唯讀)
 const DB_PATH = process.env.DB_PATH || './education.db';
 let db = null;
 
+// SQLite (金流 - 可寫)
+const PAYMENT_DB_PATH = process.env.PAYMENT_DB_PATH || './payment.db';
+let paymentDb = null;
+
 function getDb() {
   if (!db) {
-    db = new sqlite3.Database(DB_PATH, (err) => {
+    db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READONLY, (err) => {
       if (err) {
-        console.error('❌ SQLite 連線失敗:', err.message);
+        console.error('❌ 題庫連線失敗:', err.message);
       } else {
-        console.log('✅ 資料庫連線成功:', DB_PATH);
-        // 連線成功後立即建表
-        initPaymentTables(db);
+        console.log('✅ 題庫連線成功:', DB_PATH);
       }
     });
   }
   return db;
+}
+
+function getPaymentDb() {
+  if (!paymentDb) {
+    paymentDb = new sqlite3.Database(PAYMENT_DB_PATH, (err) => {
+      if (err) {
+        console.error('❌ 金流DB連線失敗:', err.message);
+      } else {
+        console.log('✅ 金流DB連線成功:', PAYMENT_DB_PATH);
+        // 連線成功後立即建表
+        initPaymentTables(paymentDb);
+      }
+    });
+  }
+  return paymentDb;
 }
 
 // 初始化金流相關資料表
@@ -128,6 +145,11 @@ function initPaymentTables(database) {
     if (err) console.error('❌ user_certs:', err.message);
     else console.log('✅ user_certs 就緒');
   });
+}
+
+// 啟動時初始化兩個資料庫
+getDb();
+getPaymentDb();
 }
 
 // 啟動時觸發連線

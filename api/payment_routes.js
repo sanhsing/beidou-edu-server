@@ -9,7 +9,52 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 const ecpay = new ECPayService();
-const db = new sqlite3.Database(path.join(__dirname, '../business.db'));
+
+// 使用 runtime.db (統一用戶中心)
+const RUNTIME_DB_PATH = process.env.RUNTIME_DB_PATH || path.join(__dirname, '../runtime.db');
+const db = new sqlite3.Database(RUNTIME_DB_PATH, (err) => {
+  if (err) {
+    console.error('❌ payment_routes: runtime.db 連線失敗:', err.message);
+  } else {
+    console.log('✅ payment_routes: runtime.db 連線成功');
+    // 確保金流相關表存在
+    db.run(`
+      CREATE TABLE IF NOT EXISTS pending_orders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trade_no TEXT UNIQUE NOT NULL,
+        user_id TEXT NOT NULL,
+        order_type TEXT NOT NULL,
+        plan TEXT,
+        cert_id TEXT,
+        amount INTEGER NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        paid_at TEXT
+      )
+    `);
+    db.run(`
+      CREATE TABLE IF NOT EXISTS user_subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT UNIQUE NOT NULL,
+        plan TEXT NOT NULL,
+        status TEXT DEFAULT 'active',
+        billing_cycle TEXT,
+        expires_at TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT
+      )
+    `);
+    db.run(`
+      CREATE TABLE IF NOT EXISTS user_certs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        cert_id TEXT NOT NULL,
+        purchased_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, cert_id)
+      )
+    `);
+  }
+});
 
 // 統一入口 - 建立付款 (Landing v8.0 調用)
 router.post('/create', async (req, res) => {
