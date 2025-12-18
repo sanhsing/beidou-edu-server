@@ -30,21 +30,11 @@ router.post('/create', async (req, res) => {
       VALUES (?, ?, 'subscription', ?, ?, 'pending', datetime('now'))
     `, [payment.tradeNo, userId, plan, payment.amount]);
 
-    // 產生 ECPay 自動提交表單 HTML
-    const formHtml = `
-      <form id="ecpay-form" method="POST" action="${payment.url}">
-        ${Object.entries(payment.params).map(([k, v]) => 
-          `<input type="hidden" name="${k}" value="${v}">`
-        ).join('\n')}
-      </form>
-      <script>document.getElementById('ecpay-form').submit();</script>
-    `;
-
+    // 回傳 ECPay 表單 HTML（移除 paymentUrl，強制前端使用 form POST）
     res.json({
       success: true,
-      html: formHtml,
-      paymentUrl: payment.url,
-      params: payment.params,
+      html: payment.html,
+      // paymentUrl 已移除 - ECPay 必須用 POST form，不能 GET 跳轉
       tradeNo: payment.tradeNo,
       amount: payment.amount,
     });
@@ -74,7 +64,8 @@ router.post('/subscribe', async (req, res) => {
 
     res.json({
       success: true,
-      paymentUrl: payment.url,
+      html: payment.html,
+      // paymentUrl 已移除 - ECPay 必須用 POST form
       params: payment.params,
       tradeNo: payment.tradeNo,
       amount: payment.amount,
@@ -98,7 +89,8 @@ router.post('/cert', async (req, res) => {
 
     res.json({
       success: true,
-      paymentUrl: payment.url,
+      html: payment.html,
+      // paymentUrl 已移除 - ECPay 必須用 POST form
       params: payment.params,
       tradeNo: payment.tradeNo,
       amount: payment.amount,

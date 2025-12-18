@@ -131,7 +131,7 @@ class ECPayService {
       MerchantTradeDate: tradeDate,
       PaymentType: 'aio',
       TotalAmount: amount,
-      TradeDesc: `北斗教育${planInfo.name}訂閱`,
+      TradeDesc: encodeURIComponent(`北斗教育${planInfo.name}訂閱`),
       ItemName: `北斗教育${planInfo.name} - ${billingCycle === 'yearly' ? '年繳' : '月繳'}`,
       ReturnURL: this.notifyUrl,
       ClientBackURL: this.returnUrl,
@@ -144,9 +144,13 @@ class ECPayService {
     
     params.CheckMacValue = this.generateCheckMacValue(params);
     
+    // 產生自動提交表單 HTML
+    const html = this.generateFormHtml(params);
+    
     return {
       url: this.config.apiUrl,
       params,
+      html,
       tradeNo,
       amount,
       isProduction: this.isProduction
@@ -172,7 +176,7 @@ class ECPayService {
       MerchantTradeDate: tradeDate,
       PaymentType: 'aio',
       TotalAmount: amount,
-      TradeDesc: `北斗教育證照課程`,
+      TradeDesc: encodeURIComponent(`北斗教育證照課程`),
       ItemName: `${certInfo.name}${isPro ? ' Pro版' : ''}`,
       ReturnURL: this.notifyUrl,
       ClientBackURL: this.returnUrl,
@@ -185,9 +189,13 @@ class ECPayService {
     
     params.CheckMacValue = this.generateCheckMacValue(params);
     
+    // 產生自動提交表單 HTML
+    const html = this.generateFormHtml(params);
+    
     return {
       url: this.config.apiUrl,
       params,
+      html,
       tradeNo,
       amount,
       isProduction: this.isProduction
@@ -207,6 +215,22 @@ class ECPayService {
     const calculatedMac = this.generateCheckMacValue(paramsToVerify);
     
     return receivedMac === calculatedMac;
+  }
+  
+  /**
+   * 產生 ECPay 表單 HTML（自動提交）
+   */
+  generateFormHtml(params) {
+    const inputs = Object.entries(params)
+      .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}">`)
+      .join('\n      ');
+    
+    return `
+      <form id="ecpay-form" method="POST" action="${this.config.apiUrl}">
+      ${inputs}
+      </form>
+      <script>document.getElementById('ecpay-form').submit();</script>
+    `;
   }
   
   /**
