@@ -147,13 +147,9 @@ function initPaymentTables(database) {
   });
 }
 
-// 啟動時初始化兩個資料庫
+// 啟動時初始化資料庫
 getDb();
 getPaymentDb();
-}
-
-// 啟動時觸發連線
-getDb();
 
 // Promise 包裝
 const dbAll = (sql, params = []) => {
