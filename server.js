@@ -94,6 +94,57 @@ const dbGet = (sql, params = []) => {
   });
 };
 
+// 初始化金流相關資料表
+function initPaymentTables() {
+  const db = getDb();
+  
+  // 待付款訂單
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pending_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trade_no TEXT UNIQUE NOT NULL,
+      user_id TEXT NOT NULL,
+      order_type TEXT NOT NULL,
+      plan TEXT,
+      cert_id TEXT,
+      amount INTEGER NOT NULL,
+      status TEXT DEFAULT 'pending',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      paid_at TEXT
+    )
+  `);
+  
+  // 用戶訂閱
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT UNIQUE NOT NULL,
+      plan TEXT NOT NULL,
+      status TEXT DEFAULT 'active',
+      billing_cycle TEXT,
+      expires_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT
+    )
+  `);
+  
+  // 用戶證照
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_certs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      cert_id TEXT NOT NULL,
+      purchased_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, cert_id)
+    )
+  `);
+  
+  console.log('✅ 金流資料表初始化完成');
+}
+
+// 啟動時初始化
+setTimeout(initPaymentTables, 1000);
+
 // ============================================================
 // 核心 API 路由
 // ============================================================
