@@ -11,6 +11,47 @@ const path = require('path');
 const router = express.Router();
 
 // ============================================================
+// Cert ID 對應表 (API ↔ DB)
+// ============================================================
+
+const CERT_ID_MAP = {
+  // API 使用 → DB 實際值
+  'google_ai': 'CERT001',
+  'google-ai': 'CERT001',
+  'CERT001': 'CERT001',
+  'aws_cloud': 'CERT002', 
+  'aws-ai': 'CERT002',
+  'CERT002': 'CERT002',
+  'azure_ai': 'CERT003',
+  'azure-ai': 'CERT003',
+  'CERT003': 'CERT003',
+  'AI-900': 'AI-900',
+  'AZ-900': 'AZ-900',
+  'DP-900': 'DP-900',
+  'ipas_security': 'IPAS_ISE_BASIC',
+  'IPAS_ISE_BASIC': 'IPAS_ISE_BASIC',
+  'IPAS_ISE_INTER': 'IPAS_ISE_INTER'
+};
+
+// XTF 用的 cert_id 對應
+const XTF_CERT_ID_MAP = {
+  'CERT001': 'GOOGLE_AI_ESSENTIALS',
+  'google_ai': 'GOOGLE_AI_ESSENTIALS',
+  'google-ai': 'GOOGLE_AI_ESSENTIALS',
+  'IPAS_ISE_BASIC': 'IPAS_ISE_BASIC',
+  'ipas_security': 'IPAS_ISE_BASIC'
+};
+
+function mapCertId(input) {
+  return CERT_ID_MAP[input] || input;
+}
+
+function mapXtfCertId(input) {
+  return XTF_CERT_ID_MAP[input] || input;
+}
+
+
+// ============================================================
 // 資料庫連接
 // ============================================================
 
@@ -126,7 +167,7 @@ router.get('/list', async (req, res) => {
     // 題目統計
     const aiStats = await dbAll(`
       SELECT cert_id, COUNT(*) as count 
-      FROM ai_cert_questions 
+      FROM ai_cert_questions_v2 
       GROUP BY cert_id
     `);
     const aiStatsMap = {};
@@ -168,12 +209,12 @@ router.get('/list', async (req, res) => {
  */
 router.get('/stats', async (req, res) => {
   try {
-    const aiTotal = await dbGet('SELECT COUNT(*) as count FROM ai_cert_questions');
+    const aiTotal = await dbGet('SELECT COUNT(*) as count FROM ai_cert_questions_v2');
     const ipasTotal = await dbGet('SELECT COUNT(*) as count FROM ipas_ise_questions');
     
     const aiByDomain = await dbAll(`
       SELECT domain_id, COUNT(*) as count 
-      FROM ai_cert_questions 
+      FROM ai_cert_questions_v2 
       GROUP BY domain_id 
       ORDER BY count DESC
     `);
@@ -214,9 +255,10 @@ router.get('/stats', async (req, res) => {
  */
 router.get('/questions/:certId', async (req, res) => {
   try {
-    const { certId } = req.params;
+    const { certId: rawCertId } = req.params;
+    const certId = mapCertId(rawCertId);
     const { domain, limit = 20, random = 'true' } = req.query;
-    const maxLimit = Math.min(parseInt(limit), 100);
+    const maxLimit = Math.min(parseInt(limit), 1000);
     
     let questions = [];
     
@@ -247,7 +289,7 @@ router.get('/questions/:certId', async (req, res) => {
         explanation: r.explanation
       }));
     } else {
-      let sql = 'SELECT * FROM ai_cert_questions WHERE cert_id = ?';
+      let sql = 'SELECT * FROM ai_cert_questions_v2 WHERE cert_id = ?';
       const params = [certId];
       
       if (domain) {
@@ -342,7 +384,7 @@ router.post('/exam/start', async (req, res) => {
       }));
     } else {
       const rows = await dbAll(`
-        SELECT * FROM ai_cert_questions 
+        SELECT * FROM ai_cert_questions_v2 
         WHERE cert_id = ? 
         ORDER BY RANDOM() 
         LIMIT ?
@@ -372,7 +414,7 @@ router.post('/exam/start', async (req, res) => {
       answerRows.forEach(r => answers[r.question_id] = r.answer);
     } else {
       const answerRows = await dbAll(`
-        SELECT question_id, answer FROM ai_cert_questions 
+        SELECT question_id, answer FROM ai_cert_questions_v2 
         WHERE question_id IN (${questions.map(q => `'${q.id}'`).join(',')})
       `);
       answerRows.forEach(r => answers[r.question_id] = r.answer);
@@ -438,7 +480,7 @@ router.post('/exam/submit', async (req, res) => {
     } else {
       const rows = await dbAll(`
         SELECT question_id, answer, explanation, domain_id 
-        FROM ai_cert_questions 
+        FROM ai_cert_questions_v2 
         WHERE question_id IN (${questionIds.map(id => `'${id}'`).join(',')})
       `);
       rows.forEach(r => {
@@ -524,7 +566,7 @@ router.post('/check', async (req, res) => {
       );
     } else {
       row = await dbGet(
-        'SELECT answer, explanation FROM ai_cert_questions WHERE question_id = ?',
+        'SELECT answer, explanation FROM ai_cert_questions_v2 WHERE question_id = ?',
         [question_id]
       );
     }
@@ -560,7 +602,8 @@ router.post('/check', async (req, res) => {
  */
 router.get('/domains/:certId', async (req, res) => {
   try {
-    const { certId } = req.params;
+    const { certId: rawCertId } = req.params;
+    const certId = mapCertId(rawCertId);
     
     let domains = [];
     
@@ -576,7 +619,7 @@ router.get('/domains/:certId', async (req, res) => {
       domains = await dbAll(`
         SELECT d.*, COUNT(q.question_id) as question_count
         FROM ai_cert_exam_domains d
-        LEFT JOIN ai_cert_questions q ON d.domain_id = q.domain_id
+        LEFT JOIN ai_cert_questions_v2 q ON d.domain_id = q.domain_id
         WHERE d.cert_id = ?
         GROUP BY d.domain_id
       `, [certId]);
@@ -600,7 +643,8 @@ router.get('/domains/:certId', async (req, res) => {
  */
 router.get('/glossary/:certId', async (req, res) => {
   try {
-    const { certId } = req.params;
+    const { certId: rawCertId } = req.params;
+    const certId = mapCertId(rawCertId);
     const { limit = 50 } = req.query;
     
     const terms = await dbAll(`
@@ -754,7 +798,8 @@ router.get('/xtf/:certId/:nodeId', async (req, res) => {
  */
 router.get('/xtf-list/:certId', async (req, res) => {
   try {
-    const { certId } = req.params;
+    const { certId: rawCertId } = req.params;
+    const certId = mapXtfCertId(rawCertId);
     
     let rows;
     if (certId.startsWith('IPAS')) {
@@ -892,7 +937,8 @@ router.get('/learning-paths', async (req, res) => {
  */
 router.get('/hub-nodes/:certId', async (req, res) => {
   try {
-    const { certId } = req.params;
+    const { certId: rawCertId } = req.params;
+    const certId = mapXtfCertId(rawCertId);
     const { min_score = 80 } = req.query;
     
     let rows;
@@ -945,7 +991,7 @@ router.get('/stats', async (req, res) => {
     // AI 證照統計
     const aiCert = await dbAll(`
       SELECT cert_id, COUNT(*) as count
-      FROM ai_cert_questions
+      FROM ai_cert_questions_v2
       GROUP BY cert_id
     `);
     
@@ -989,7 +1035,7 @@ router.get('/stats', async (req, res) => {
 router.get('/questions', async (req, res) => {
   try {
     const { cert, limit = 20 } = req.query;
-    const maxLimit = Math.min(parseInt(limit), 100);
+    const maxLimit = Math.min(parseInt(limit), 1000);
     
     let questions = [];
     
@@ -1016,7 +1062,7 @@ router.get('/questions', async (req, res) => {
       const certId = cert?.toUpperCase() || 'GOOGLE';
       const rows = await dbAll(`
         SELECT id, question, options, answer, explanation, category, difficulty
-        FROM ai_cert_questions
+        FROM ai_cert_questions_v2
         WHERE cert_id = ?
         ORDER BY RANDOM()
         LIMIT ?
@@ -1052,3 +1098,73 @@ function parseJSON(str) {
     return str;
   }
 }
+
+// ============================================================
+// 相容路由：/:certId/questions (前端格式)
+// ============================================================
+
+router.get('/:certId/questions', async (req, res) => {
+  try {
+    const { certId: rawCertId } = req.params;
+    const certId = mapCertId(rawCertId);
+    const { domain, limit = 50, random = 'true' } = req.query;
+    const maxLimit = Math.min(parseInt(limit), 1000);
+    
+    let questions = [];
+    
+    if (certId.startsWith('IPAS')) {
+      let sql = 'SELECT * FROM ipas_ise_questions WHERE cert_id = ?';
+      const params = [certId];
+      
+      if (domain) {
+        sql += ' AND domain_id LIKE ?';
+        params.push(`${domain}%`);
+      }
+      
+      if (random === 'true') sql += ' ORDER BY RANDOM()';
+      sql += ' LIMIT ?';
+      params.push(maxLimit);
+      
+      const rows = await dbAll(sql, params);
+      questions = rows.map(r => ({
+        id: r.question_id || r.id,
+        category: r.domain_id || r.category,
+        question: r.question_text || r.question,
+        options: parseJSON(r.options),
+        answer: r.answer,
+        explanation: r.explanation,
+        difficulty: r.difficulty
+      }));
+    } else {
+      let sql = 'SELECT * FROM ai_cert_questions_v2 WHERE cert_id = ?';
+      const params = [certId];
+      
+      if (domain) {
+        sql += ' AND domain_id LIKE ?';
+        params.push(`${domain}%`);
+      }
+      
+      if (random === 'true') sql += ' ORDER BY RANDOM()';
+      sql += ' LIMIT ?';
+      params.push(maxLimit);
+      
+      const rows = await dbAll(sql, params);
+      questions = rows.map(r => ({
+        id: r.question_id || r.id,
+        category: r.domain_id || r.category,
+        question: r.question_text || r.question,
+        options: parseJSON(r.options),
+        answer: r.answer,
+        explanation: r.explanation,
+        difficulty: r.difficulty
+      }));
+    }
+    
+    res.json({
+      success: true,
+      data: questions
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
