@@ -1,5 +1,5 @@
 /**
- * 北斗教育 API Server v7.5.2
+ * 北斗教育 API Server v7.6.0
  * 混合式架構：SQLite (題庫) + MongoDB (用戶)
  * 
  * 北斗七星文創數位有限公司 © 2025
@@ -181,7 +181,7 @@ app.get('/health', (req, res) => {
   
   res.json({ 
     status: 'ok', 
-    version: '7.5.2',
+    version: '7.6.0',
     timestamp: new Date().toISOString(),
     uptime: Math.floor(process.uptime()),
     environment: process.env.NODE_ENV || 'development',
@@ -201,7 +201,7 @@ app.get('/health', (req, res) => {
 app.get('/api', (req, res) => {
   res.json({
     name: '北斗教育 API',
-    version: '7.5.2',
+    version: '7.6.0',
     architecture: '混合式 (SQLite + MongoDB)',
     endpoints: [
       'GET  /health - 健康檢查',
@@ -363,23 +363,20 @@ app.get('/api/quiz/random', async (req, res) => {
     
     let sql = `
       SELECT 
-        q.question_id,
-        q.node_id,
-        q.question_type,
-        q.stem,
-        q.options,
-        q.answer,
-        q.explanation,
-        q.difficulty,
-        n.subject,
-        n.topic
-      FROM questions q
-      JOIN xtf_nodes n ON q.node_id = n.node_id
+        id,
+        node_id,
+        subject_category as subject,
+        question,
+        options,
+        answer,
+        explanation,
+        difficulty
+      FROM gsat_generated_questions
     `;
     
     const params = [];
     if (subject) {
-      sql += ` WHERE n.subject = ?`;
+      sql += ` WHERE subject_category = ?`;
       params.push(subject);
     }
     
@@ -389,10 +386,13 @@ app.get('/api/quiz/random', async (req, res) => {
     const questions = await dbAll(sql, params);
     
     // 解析 options JSON
-    const parsed = questions.map(q => ({
-      ...q,
-      options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options
-    }));
+    const parsed = questions.map(q => {
+      let opts = [];
+      try {
+        opts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+      } catch(e) { opts = []; }
+      return { ...q, options: opts };
+    });
     
     res.json({ success: true, data: parsed, count: parsed.length });
   } catch (error) {
@@ -409,24 +409,27 @@ app.get('/api/quiz/subject/:subject', async (req, res) => {
     
     const questions = await dbAll(`
       SELECT 
-        q.question_id,
-        q.node_id,
-        q.stem,
-        q.options,
-        q.answer,
-        q.difficulty,
-        n.topic
-      FROM questions q
-      JOIN xtf_nodes n ON q.node_id = n.node_id
-      WHERE n.subject = ?
-      ORDER BY q.difficulty, RANDOM()
+        id,
+        node_id,
+        subject_category as subject,
+        question,
+        options,
+        answer,
+        explanation,
+        difficulty
+      FROM gsat_generated_questions
+      WHERE subject_category = ?
+      ORDER BY difficulty, RANDOM()
       LIMIT ? OFFSET ?
     `, [subject, limit, offset]);
     
-    const parsed = questions.map(q => ({
-      ...q,
-      options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options
-    }));
+    const parsed = questions.map(q => {
+      let opts = [];
+      try {
+        opts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+      } catch(e) { opts = []; }
+      return { ...q, options: opts };
+    });
     
     res.json({ success: true, data: parsed });
   } catch (error) {
@@ -440,14 +443,21 @@ app.get('/api/quiz/node/:nodeId', async (req, res) => {
     const { nodeId } = req.params;
     
     const questions = await dbAll(`
-      SELECT * FROM questions WHERE node_id = ?
+      SELECT 
+        id, node_id, subject_category as subject,
+        question, options, answer, explanation, difficulty
+      FROM gsat_generated_questions 
+      WHERE node_id = ?
       ORDER BY difficulty
     `, [nodeId]);
     
-    const parsed = questions.map(q => ({
-      ...q,
-      options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options
-    }));
+    const parsed = questions.map(q => {
+      let opts = [];
+      try {
+        opts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+      } catch(e) { opts = []; }
+      return { ...q, options: opts };
+    });
     
     res.json({ success: true, data: parsed });
   } catch (error) {
@@ -461,14 +471,15 @@ app.post('/api/quiz/check', async (req, res) => {
     const { question_id, user_answer } = req.body;
     
     const question = await dbGet(`
-      SELECT answer, explanation FROM questions WHERE question_id = ?
+      SELECT answer, explanation FROM gsat_generated_questions WHERE id = ?
     `, [question_id]);
     
     if (!question) {
       return res.status(404).json({ success: false, error: '題目不存在' });
     }
     
-    const correct = question.answer === user_answer;
+    const correct = question.answer === user_answer || 
+                    question.answer === parseInt(user_answer);
     
     res.json({
       success: true,
@@ -517,7 +528,7 @@ app.get('/api/knowledge/node/:nodeId', async (req, res) => {
     const { nodeId } = req.params;
     
     const node = await dbGet(`
-      SELECT * FROM xtf_nodes WHERE node_id = ?
+      SELECT * FROM xtf_nodes_v2 WHERE node_id = ?
     `, [nodeId]);
     
     if (!node) {
@@ -526,7 +537,7 @@ app.get('/api/knowledge/node/:nodeId', async (req, res) => {
     
     // 取得相關題目數
     const questionCount = await dbGet(`
-      SELECT COUNT(*) as count FROM questions WHERE node_id = ?
+      SELECT COUNT(*) as count FROM gsat_generated_questions WHERE node_id = ?
     `, [nodeId]);
     
     res.json({ 
@@ -599,24 +610,51 @@ app.get('/api/cert/:certId/questions', async (req, res) => {
     const { certId } = req.params;
     const limit = Math.min(parseInt(req.query.limit) || 20, 50);
     
-    // 嘗試從 cert_questions 表取得
-    const tableExists = await dbGet(`
-      SELECT name FROM sqlite_master 
-      WHERE type='table' AND name='cert_questions'
-    `);
+    let questions = [];
     
-    if (!tableExists) {
-      return res.json({ success: true, data: [], message: '證照題庫建置中' });
+    // 根據 certId 選擇不同的表
+    if (certId === 'ipas_security' || certId.startsWith('IPAS')) {
+      // iPAS 資訊安全
+      questions = await dbAll(`
+        SELECT 
+          id, domain_id as category, question, 
+          option_a, option_b, option_c, option_d,
+          answer, explanation, difficulty
+        FROM ipas_ise_questions 
+        ORDER BY RANDOM() LIMIT ?
+      `, [limit]);
+    } else {
+      // AI 認證 (google_ai, aws_cloud 等)
+      const certMap = {
+        'google_ai': 'CERT001',
+        'aws_cloud': 'CERT002', 
+        'microsoft_ai': 'CERT003'
+      };
+      const mappedId = certMap[certId] || certId;
+      
+      questions = await dbAll(`
+        SELECT 
+          id, domain_id as category, question,
+          option_a, option_b, option_c, option_d,
+          answer, explanation, difficulty
+        FROM ai_cert_questions 
+        WHERE certification_id = ?
+        ORDER BY RANDOM() LIMIT ?
+      `, [mappedId, limit]);
     }
     
-    const questions = await dbAll(`
-      SELECT * FROM cert_questions 
-      WHERE cert_id = ?
-      ORDER BY RANDOM()
-      LIMIT ?
-    `, [certId, limit]);
+    // 格式化選項
+    const formatted = questions.map(q => ({
+      id: q.id,
+      category: q.category,
+      question: q.question,
+      options: [q.option_a, q.option_b, q.option_c, q.option_d].filter(Boolean),
+      answer: q.answer,
+      explanation: q.explanation,
+      difficulty: q.difficulty
+    }));
     
-    res.json({ success: true, data: questions });
+    res.json({ success: true, data: formatted, count: formatted.length });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -667,7 +705,7 @@ app.get('/api/xtf/node/:nodeId', async (req, res) => {
     const { nodeId } = req.params;
     
     const node = await dbGet(`
-      SELECT * FROM xtf_nodes WHERE node_id = ?
+      SELECT * FROM xtf_nodes_v2 WHERE node_id = ?
     `, [nodeId]);
     
     if (!node) {
@@ -881,7 +919,7 @@ async function startServer() {
   // 啟動
   app.listen(PORT, () => {
     console.log('================================================');
-    console.log(`🚀 北斗教育 API Server v7.5.2`);
+    console.log(`🚀 北斗教育 API Server v7.6.0`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`📊 SQLite: ${DB_PATH}`);
     console.log(`📦 MongoDB: ${getConnectionStatus().connected ? '已連線' : '未連線'}`);
