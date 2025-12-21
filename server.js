@@ -242,7 +242,7 @@ app.get('/api/stats', async (req, res) => {
     // 知識節點數 (優先嘗試 xtf_nodes_v2)
     let nodesResult = await dbGet(`SELECT COUNT(*) as count FROM xtf_nodes_v2`);
     if (!nodesResult || nodesResult.count === 0) {
-      nodesResult = await dbGet(`SELECT COUNT(*) as count FROM xtf_nodes_v2`);
+      nodesResult = await dbGet(`SELECT COUNT(*) as count FROM xtf_nodes`);
     }
     
     // 題目數 (優先嘗試 gsat_generated_questions)
@@ -254,7 +254,7 @@ app.get('/api/stats', async (req, res) => {
     // 科目數
     let subjectsResult = await dbGet(`SELECT COUNT(DISTINCT subject_name) as count FROM xtf_nodes_v2`);
     if (!subjectsResult || subjectsResult.count === 0) {
-      subjectsResult = await dbGet(`SELECT COUNT(DISTINCT subject) as count FROM xtf_nodes_v2`);
+      subjectsResult = await dbGet(`SELECT COUNT(DISTINCT subject) as count FROM xtf_nodes`);
     }
     
     // 各科統計
@@ -374,7 +374,7 @@ app.get('/api/quiz/random', async (req, res) => {
         n.subject,
         n.topic
       FROM questions q
-      JOIN xtf_nodes_v2 n ON q.node_id = n.node_id
+      JOIN xtf_nodes n ON q.node_id = n.node_id
     `;
     
     const params = [];
@@ -417,7 +417,7 @@ app.get('/api/quiz/subject/:subject', async (req, res) => {
         q.difficulty,
         n.topic
       FROM questions q
-      JOIN xtf_nodes_v2 n ON q.node_id = n.node_id
+      JOIN xtf_nodes n ON q.node_id = n.node_id
       WHERE n.subject = ?
       ORDER BY q.difficulty, RANDOM()
       LIMIT ? OFFSET ?
@@ -500,7 +500,7 @@ app.get('/api/knowledge/tree/:subject', async (req, res) => {
         importance,
         difficulty,
         prerequisites
-      FROM xtf_nodes_v2
+      FROM xtf_nodes
       WHERE subject = ?
       ORDER BY chapter, node_id
     `, [subject]);
@@ -517,7 +517,7 @@ app.get('/api/knowledge/node/:nodeId', async (req, res) => {
     const { nodeId } = req.params;
     
     const node = await dbGet(`
-      SELECT * FROM xtf_nodes_v2 WHERE node_id = ?
+      SELECT * FROM xtf_nodes WHERE node_id = ?
     `, [nodeId]);
     
     if (!node) {
@@ -552,7 +552,7 @@ app.get('/api/knowledge/search', async (req, res) => {
     
     const nodes = await dbAll(`
       SELECT node_id, subject, topic, chapter
-      FROM xtf_nodes_v2
+      FROM xtf_nodes
       WHERE topic LIKE ? OR node_id LIKE ?
       LIMIT 20
     `, [`%${q}%`, `%${q}%`]);
@@ -641,7 +641,7 @@ app.get('/api/xtf-list', async (req, res) => {
         importance,
         difficulty,
         prerequisites
-      FROM xtf_nodes_v2
+      FROM xtf_nodes
     `;
     
     const params = [];
@@ -667,7 +667,7 @@ app.get('/api/xtf/node/:nodeId', async (req, res) => {
     const { nodeId } = req.params;
     
     const node = await dbGet(`
-      SELECT * FROM xtf_nodes_v2 WHERE node_id = ?
+      SELECT * FROM xtf_nodes WHERE node_id = ?
     `, [nodeId]);
     
     if (!node) {
@@ -695,7 +695,7 @@ app.get('/api/xtf/random', async (req, res) => {
         explanation,
         memory_hook,
         application
-      FROM xtf_nodes_v2
+      FROM xtf_nodes
     `;
     
     const params = [];
@@ -895,19 +895,18 @@ async function startServer() {
 
 startServer();
 
-module.exports = app;
 
 // ============================================================
-// XTF v2 API (覆蓋舊版)
+// XTF v2 API (新增)
 // ============================================================
 
-// XTF 節點列表 (星圖用) - v2 版本
+// XTF 節點列表 v2 (星圖用)
 app.get('/api/xtf/list', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 500, 2000);
     const subject = req.query.subject;
     
-    let sql = \`
+    let sql = `
       SELECT 
         node_id,
         subject_name as subject,
@@ -917,15 +916,15 @@ app.get('/api/xtf/list', async (req, res) => {
         difficulty,
         prerequisites
       FROM xtf_nodes_v2
-    \`;
+    `;
     
     const params = [];
     if (subject) {
-      sql += \` WHERE subject_name = ?\`;
+      sql += ` WHERE subject_name = ?`;
       params.push(subject);
     }
     
-    sql += \` ORDER BY subject_name, chapter_id, node_id LIMIT ?\`;
+    sql += ` ORDER BY subject_name, chapter_id, node_id LIMIT ?`;
     params.push(limit);
     
     const nodes = await dbAll(sql, params);
@@ -936,12 +935,12 @@ app.get('/api/xtf/list', async (req, res) => {
   }
 });
 
-// XTF 節點詳情 (字卡用) - v2 版本
+// XTF 節點詳情 v2 (字卡用)
 app.get('/api/xtf/v2/node/:nodeId', async (req, res) => {
   try {
     const { nodeId } = req.params;
     
-    const node = await dbGet(\`
+    const node = await dbGet(`
       SELECT 
         node_id,
         subject_name as subject,
@@ -957,13 +956,12 @@ app.get('/api/xtf/v2/node/:nodeId', async (req, res) => {
         prerequisites,
         next_nodes
       FROM xtf_nodes_v2 WHERE node_id = ?
-    \`, [nodeId]);
+    `, [nodeId]);
     
     if (!node) {
       return res.status(404).json({ success: false, error: '節點不存在' });
     }
     
-    // 格式化為 XTF 三層結構
     const xtf = {
       node_id: node.node_id,
       subject: node.subject,
@@ -980,13 +978,13 @@ app.get('/api/xtf/v2/node/:nodeId', async (req, res) => {
   }
 });
 
-// XTF 隨機節點 (字卡用) - v2 版本
+// XTF 隨機節點 v2 (字卡用)
 app.get('/api/xtf/v2/random', async (req, res) => {
   try {
     const count = Math.min(parseInt(req.query.count) || 10, 50);
     const subject = req.query.subject;
     
-    let sql = \`
+    let sql = `
       SELECT 
         node_id,
         subject_name as subject,
@@ -997,15 +995,15 @@ app.get('/api/xtf/v2/random', async (req, res) => {
         memorize,
         apply
       FROM xtf_nodes_v2
-    \`;
+    `;
     
     const params = [];
     if (subject) {
-      sql += \` WHERE subject_name = ?\`;
+      sql += ` WHERE subject_name = ?`;
       params.push(subject);
     }
     
-    sql += \` ORDER BY RANDOM() LIMIT ?\`;
+    sql += ` ORDER BY RANDOM() LIMIT ?`;
     params.push(count);
     
     const nodes = await dbAll(sql, params);
@@ -1022,7 +1020,7 @@ app.get('/api/quiz/gsat/questions', async (req, res) => {
     const { subject, count = 10, shuffle = true } = req.query;
     const limit = Math.min(parseInt(count), 50);
     
-    let sql = \`
+    let sql = `
       SELECT 
         id,
         subject_category as subject,
@@ -1032,24 +1030,23 @@ app.get('/api/quiz/gsat/questions', async (req, res) => {
         explanation,
         difficulty
       FROM gsat_generated_questions
-    \`;
+    `;
     
     const params = [];
     if (subject) {
-      sql += \` WHERE subject_category = ?\`;
+      sql += ` WHERE subject_category = ?`;
       params.push(subject);
     }
     
     if (shuffle === 'true' || shuffle === true) {
-      sql += \` ORDER BY RANDOM()\`;
+      sql += ` ORDER BY RANDOM()`;
     }
     
-    sql += \` LIMIT ?\`;
+    sql += ` LIMIT ?`;
     params.push(limit);
     
     const rows = await dbAll(sql, params);
     
-    // 格式化選項為陣列
     const questions = rows.map(q => ({
       id: q.id,
       subject: q.subject,
@@ -1066,3 +1063,6 @@ app.get('/api/quiz/gsat/questions', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
+
+module.exports = app;
