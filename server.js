@@ -1,5 +1,5 @@
 /**
- * 北斗教育 API Server v7.6.0
+ * 北斗教育 API Server v7.5.1
  * 混合式架構：SQLite (題庫) + MongoDB (用戶)
  * 
  * 北斗七星文創數位有限公司 © 2025
@@ -181,7 +181,7 @@ app.get('/health', (req, res) => {
   
   res.json({ 
     status: 'ok', 
-    version: '7.6.0',
+    version: '7.6.1',
     timestamp: new Date().toISOString(),
     uptime: Math.floor(process.uptime()),
     environment: process.env.NODE_ENV || 'development',
@@ -201,7 +201,7 @@ app.get('/health', (req, res) => {
 app.get('/api', (req, res) => {
   res.json({
     name: '北斗教育 API',
-    version: '7.6.0',
+    version: '7.6.1',
     architecture: '混合式 (SQLite + MongoDB)',
     endpoints: [
       'GET  /health - 健康檢查',
@@ -617,9 +617,8 @@ app.get('/api/cert/:certId/questions', async (req, res) => {
       // iPAS 資訊安全
       questions = await dbAll(`
         SELECT 
-          id, domain_id as category, question, 
-          option_a, option_b, option_c, option_d,
-          answer, explanation, difficulty
+          question_id, domain_id, question_text, 
+          options, answer, explanation, difficulty
         FROM ipas_ise_questions 
         ORDER BY RANDOM() LIMIT ?
       `, [limit]);
@@ -634,25 +633,30 @@ app.get('/api/cert/:certId/questions', async (req, res) => {
       
       questions = await dbAll(`
         SELECT 
-          id, domain_id as category, question,
-          option_a, option_b, option_c, option_d,
-          answer, explanation, difficulty
+          question_id, domain_id, question_text,
+          options, answer, explanation, difficulty
         FROM ai_cert_questions 
-        WHERE certification_id = ?
+        WHERE cert_id = ?
         ORDER BY RANDOM() LIMIT ?
       `, [mappedId, limit]);
     }
     
-    // 格式化選項
-    const formatted = questions.map(q => ({
-      id: q.id,
-      category: q.category,
-      question: q.question,
-      options: [q.option_a, q.option_b, q.option_c, q.option_d].filter(Boolean),
-      answer: q.answer,
-      explanation: q.explanation,
-      difficulty: q.difficulty
-    }));
+    // 格式化選項 (options 是 JSON 字串)
+    const formatted = questions.map(q => {
+      let opts = [];
+      try {
+        opts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+      } catch(e) { opts = []; }
+      return {
+        id: q.question_id,
+        category: q.domain_id,
+        question: q.question_text,
+        options: Array.isArray(opts) ? opts : [],
+        answer: q.answer,
+        explanation: q.explanation,
+        difficulty: q.difficulty
+      };
+    });
     
     res.json({ success: true, data: formatted, count: formatted.length });
   } catch (error) {
@@ -919,7 +923,7 @@ async function startServer() {
   // 啟動
   app.listen(PORT, () => {
     console.log('================================================');
-    console.log(`🚀 北斗教育 API Server v7.6.0`);
+    console.log(`🚀 北斗教育 API Server v7.5.1`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`📊 SQLite: ${DB_PATH}`);
     console.log(`📦 MongoDB: ${getConnectionStatus().connected ? '已連線' : '未連線'}`);
