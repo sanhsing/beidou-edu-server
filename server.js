@@ -1,5 +1,5 @@
 /**
- * 北斗教育 API Server v7.5.1
+ * 北斗教育 API Server v7.7.0
  * 混合式架構：SQLite (題庫) + MongoDB (用戶)
  * 
  * 北斗七星文創數位有限公司 © 2025
@@ -66,6 +66,10 @@ let db = null;
 const PAYMENT_DB_PATH = process.env.PAYMENT_DB_PATH || './payment.db';
 let paymentDb = null;
 
+// SQLite (用戶資料 - 可寫)
+const RUNTIME_DB_PATH = process.env.RUNTIME_DB_PATH || './runtime.db';
+let runtimeDb = null;
+
 function getDb() {
   if (!db) {
     db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READONLY, (err) => {
@@ -92,6 +96,19 @@ function getPaymentDb() {
     });
   }
   return paymentDb;
+}
+
+function getRuntimeDb() {
+  if (!runtimeDb) {
+    runtimeDb = new sqlite3.Database(RUNTIME_DB_PATH, (err) => {
+      if (err) {
+        console.error('❌ 用戶DB連線失敗:', err.message);
+      } else {
+        console.log('✅ 用戶DB連線成功:', RUNTIME_DB_PATH);
+      }
+    });
+  }
+  return runtimeDb;
 }
 
 // 初始化金流相關資料表
@@ -170,6 +187,34 @@ const dbGet = (sql, params = []) => {
   });
 };
 
+// Runtime DB helpers (用戶資料)
+const runtimeAll = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    getRuntimeDb().all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows || []);
+    });
+  });
+};
+
+const runtimeGet = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    getRuntimeDb().get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+};
+
+const runtimeRun = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    getRuntimeDb().run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve({ lastID: this.lastID, changes: this.changes });
+    });
+  });
+};
+
 // ============================================================
 // 核心 API 路由
 // ============================================================
@@ -181,12 +226,12 @@ app.get('/health', (req, res) => {
   
   res.json({ 
     status: 'ok', 
-    version: '7.6.4',
+    version: '7.7.0',
     timestamp: new Date().toISOString(),
     uptime: Math.floor(process.uptime()),
     environment: process.env.NODE_ENV || 'development',
     database: {
-      sqlite: db ? 'connected' : 'disconnected',
+      sqlite: db ? 'connected' : 'disconnected', runtime: runtimeDb ? 'connected' : 'disconnected',
       mongodb: mongoStatus.connected ? 'connected' : 'disconnected'
     },
     memory: {
@@ -201,7 +246,7 @@ app.get('/health', (req, res) => {
 app.get('/api', (req, res) => {
   res.json({
     name: '北斗教育 API',
-    version: '7.6.4',
+    version: '7.7.0',
     architecture: '混合式 (SQLite + MongoDB)',
     endpoints: [
       'GET  /health - 健康檢查',
@@ -887,6 +932,159 @@ async function startServer() {
     console.log('⚠️ quiz_routes 載入失敗:', e.message);
   }
   
+  // ============================================================
+  // 內建 Progress API (使用 runtime.db)
+  // ============================================================
+  
+  // 取得用戶進度
+  app.get('/api/progress/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const rtDb = getRuntimeDb();
+      
+      rtDb.all(`
+        SELECT node_id, mastery, attempts, correct, last_attempt
+        FROM user_progress 
+        WHERE user_id = ?
+        ORDER BY updated_at DESC
+      `, [userId], (err, rows) => {
+        if (err) return res.status(500).json({ success: false, error: err.message });
+        res.json({ success: true, data: rows || [] });
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  // 進度摘要
+  app.get('/api/progress/summary/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const rtDb = getRuntimeDb();
+      
+      rtDb.get(`
+        SELECT 
+          COUNT(*) as total_nodes,
+          SUM(attempts) as total_attempts,
+          SUM(correct) as total_correct,
+          AVG(mastery) as avg_mastery
+        FROM user_progress 
+        WHERE user_id = ?
+      `, [userId], (err, row) => {
+        if (err) return res.status(500).json({ success: false, error: err.message });
+        res.json({ success: true, data: row || {} });
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  // ============================================================
+  // 內建 Answers API (使用 runtime.db)
+  // ============================================================
+  
+  // 提交答案
+  app.post('/api/answers/submit', async (req, res) => {
+    try {
+      const { userId, questionId, answer, isCorrect, timeSpent } = req.body;
+      const rtDb = getRuntimeDb();
+      
+      rtDb.run(`
+        INSERT INTO user_answers (user_id, question_id, answer, is_correct, time_spent)
+        VALUES (?, ?, ?, ?, ?)
+      `, [userId || 'guest', questionId, answer, isCorrect ? 1 : 0, timeSpent || 0], function(err) {
+        if (err) return res.status(500).json({ success: false, error: err.message });
+        res.json({ success: true, data: { id: this.lastID } });
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  // 答題歷史
+  app.get('/api/answers/history/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+      const rtDb = getRuntimeDb();
+      
+      rtDb.all(`
+        SELECT * FROM user_answers 
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `, [userId, limit], (err, rows) => {
+        if (err) return res.status(500).json({ success: false, error: err.message });
+        res.json({ success: true, data: rows || [] });
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  // 答題統計
+  app.get('/api/answers/stats/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const rtDb = getRuntimeDb();
+      
+      rtDb.get(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(is_correct) as correct,
+          AVG(time_spent) as avg_time
+        FROM user_answers 
+        WHERE user_id = ?
+      `, [userId], (err, row) => {
+        if (err) return res.status(500).json({ success: false, error: err.message });
+        res.json({ success: true, data: row || {} });
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  // ============================================================
+  // 內建 Analytics API (使用 runtime.db)
+  // ============================================================
+  
+  app.get('/api/analytics/dashboard/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const rtDb = getRuntimeDb();
+      
+      // 並行查詢
+      const getAnswerStats = new Promise((resolve, reject) => {
+        rtDb.get(`
+          SELECT COUNT(*) as total, SUM(is_correct) as correct
+          FROM user_answers WHERE user_id = ?
+        `, [userId], (err, row) => err ? reject(err) : resolve(row));
+      });
+      
+      const getProgressStats = new Promise((resolve, reject) => {
+        rtDb.get(`
+          SELECT COUNT(*) as nodes_studied, AVG(mastery) as avg_mastery
+          FROM user_progress WHERE user_id = ?
+        `, [userId], (err, row) => err ? reject(err) : resolve(row));
+      });
+      
+      const [answers, progress] = await Promise.all([getAnswerStats, getProgressStats]);
+      
+      res.json({
+        success: true,
+        data: {
+          totalAnswers: answers?.total || 0,
+          correctAnswers: answers?.correct || 0,
+          accuracy: answers?.total ? Math.round((answers.correct / answers.total) * 100) : 0,
+          nodesStudied: progress?.nodes_studied || 0,
+          avgMastery: Math.round(progress?.avg_mastery || 0)
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // 404 handler（必須在所有路由之後）
 
   // 掛載學習進度路由 (P1新增)
@@ -916,6 +1114,163 @@ async function startServer() {
     console.log('⚠️ analytics_routes 載入失敗:', e.message);
   }
 
+  // ============================================================
+  // 答題記錄 API (使用 runtime.db)
+  // ============================================================
+  
+  app.post('/api/answers/submit', async (req, res) => {
+    try {
+      const { userId, questionId, answer, isCorrect, timeSpent } = req.body;
+      
+      if (!userId || !questionId) {
+        return res.status(400).json({ success: false, error: '缺少必要參數' });
+      }
+      
+      const result = await runtimeRun(`
+        INSERT INTO user_answers (user_id, question_id, answer, is_correct, time_spent)
+        VALUES (?, ?, ?, ?, ?)
+      `, [userId, questionId, answer, isCorrect ? 1 : 0, timeSpent || 0]);
+      
+      res.json({ success: true, data: { id: result.lastID } });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get('/api/answers/history/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const limit = parseInt(req.query.limit) || 50;
+      
+      const answers = await runtimeAll(`
+        SELECT * FROM user_answers 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC 
+        LIMIT ?
+      `, [userId, limit]);
+      
+      res.json({ success: true, data: answers });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================================
+  // 學習進度 API (使用 runtime.db)
+  // ============================================================
+
+  app.get('/api/progress/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const progress = await runtimeAll(`
+        SELECT * FROM user_progress 
+        WHERE user_id = ? 
+        ORDER BY updated_at DESC
+      `, [userId]);
+      
+      res.json({ success: true, data: progress });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post('/api/progress/update', async (req, res) => {
+    try {
+      const { userId, nodeId, correct } = req.body;
+      
+      if (!userId || !nodeId) {
+        return res.status(400).json({ success: false, error: '缺少必要參數' });
+      }
+      
+      // UPSERT 邏輯
+      const existing = await runtimeGet(`
+        SELECT * FROM user_progress WHERE user_id = ? AND node_id = ?
+      `, [userId, nodeId]);
+      
+      if (existing) {
+        const newAttempts = existing.attempts + 1;
+        const newCorrect = existing.correct + (correct ? 1 : 0);
+        const newMastery = Math.round((newCorrect / newAttempts) * 100);
+        
+        await runtimeRun(`
+          UPDATE user_progress 
+          SET attempts = ?, correct = ?, mastery = ?, last_attempt = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+          WHERE user_id = ? AND node_id = ?
+        `, [newAttempts, newCorrect, newMastery, userId, nodeId]);
+      } else {
+        await runtimeRun(`
+          INSERT INTO user_progress (user_id, node_id, attempts, correct, mastery, last_attempt)
+          VALUES (?, ?, 1, ?, ?, CURRENT_TIMESTAMP)
+        `, [userId, nodeId, correct ? 1 : 0, correct ? 100 : 0]);
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get('/api/progress/summary/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const summary = await runtimeGet(`
+        SELECT 
+          COUNT(*) as total_nodes,
+          SUM(attempts) as total_attempts,
+          SUM(correct) as total_correct,
+          AVG(mastery) as avg_mastery
+        FROM user_progress 
+        WHERE user_id = ?
+      `, [userId]);
+      
+      res.json({ success: true, data: summary || { total_nodes: 0, total_attempts: 0, total_correct: 0, avg_mastery: 0 } });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================================
+  // 統計儀表板 API (使用 runtime.db)
+  // ============================================================
+
+  app.get('/api/analytics/dashboard/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // 進度摘要
+      const progress = await runtimeGet(`
+        SELECT 
+          COUNT(*) as nodes_studied,
+          SUM(attempts) as total_attempts,
+          SUM(correct) as total_correct,
+          AVG(mastery) as avg_mastery
+        FROM user_progress WHERE user_id = ?
+      `, [userId]);
+      
+      // 最近答題
+      const recentAnswers = await runtimeAll(`
+        SELECT * FROM user_answers 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC LIMIT 10
+      `, [userId]);
+      
+      res.json({ 
+        success: true, 
+        data: {
+          progress: progress || {},
+          recentAnswers,
+          accuracy: progress && progress.total_attempts > 0 
+            ? Math.round((progress.total_correct / progress.total_attempts) * 100) 
+            : 0
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   app.use((req, res) => {
     res.status(404).json({ success: false, error: '找不到此路徑' });
   });
@@ -923,7 +1278,7 @@ async function startServer() {
   // 啟動
   app.listen(PORT, () => {
     console.log('================================================');
-    console.log(`🚀 北斗教育 API Server v7.5.1`);
+    console.log(`🚀 北斗教育 API Server v7.7.0`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`📊 SQLite: ${DB_PATH}`);
     console.log(`📦 MongoDB: ${getConnectionStatus().connected ? '已連線' : '未連線'}`);
