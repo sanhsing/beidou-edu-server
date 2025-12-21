@@ -181,7 +181,7 @@ app.get('/health', (req, res) => {
   
   res.json({ 
     status: 'ok', 
-    version: '7.6.2',
+    version: '7.6.3',
     timestamp: new Date().toISOString(),
     uptime: Math.floor(process.uptime()),
     environment: process.env.NODE_ENV || 'development',
@@ -201,7 +201,7 @@ app.get('/health', (req, res) => {
 app.get('/api', (req, res) => {
   res.json({
     name: '北斗教育 API',
-    version: '7.6.2',
+    version: '7.6.3',
     architecture: '混合式 (SQLite + MongoDB)',
     endpoints: [
       'GET  /health - 健康檢查',
@@ -562,9 +562,9 @@ app.get('/api/knowledge/search', async (req, res) => {
     }
     
     const nodes = await dbAll(`
-      SELECT node_id, subject, topic, chapter
-      FROM xtf_nodes
-      WHERE topic LIKE ? OR node_id LIKE ?
+      SELECT node_id, subject_name as subject, topic_name as topic, chapter_name as chapter
+      FROM xtf_nodes_v2
+      WHERE topic_name LIKE ? OR node_id LIKE ?
       LIMIT 20
     `, [`%${q}%`, `%${q}%`]);
     
