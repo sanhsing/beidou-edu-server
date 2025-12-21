@@ -1,164 +1,190 @@
 /**
- * analytics_routes.js - 統計分析 API
- * 北斗教育 v2.0
+ * analytics_routes.js - 統計分析 API (P1)
  */
 
 const express = require('express');
 const router = express.Router();
-const Database = require('better-sqlite3');
-const path = require('path');
+const sqlite3 = require('sqlite3').verbose();
 
-const dbPath = process.env.DB_PATH || './education.db';
-function getDb() { return new Database(path.resolve(__dirname, dbPath), { readonly: true }); }
+const DB_PATH = process.env.EDU_DB_PATH || './education.db';
+let db = null;
 
-// GET /analytics/dashboard/:userId - 儀表板數據
-router.get('/dashboard/:userId', (req, res) => {
-  const db = getDb();
-  try {
-    const { userId } = req.params;
-    
-    // 用戶總覽
-    const overview = db.prepare(`
-      SELECT * FROM v_user_stats WHERE user_id = ?`).get(userId) || {
-        nodes_studied: 0, subjects_studied: 0, avg_mastery: 0, 
-        total_questions: 0, total_correct: 0, wrong_count: 0
-      };
-    
-    // 今日數據
-    const today = db.prepare(`
-      SELECT COUNT(*) as questions, SUM(is_correct) as correct
-      FROM user_answers WHERE user_id = ? AND DATE(answered_at) = DATE('now')`).get(userId);
-    
-    // 本週數據
-    const week = db.prepare(`
-      SELECT COUNT(*) as questions, SUM(is_correct) as correct
-      FROM user_answers WHERE user_id = ? AND answered_at >= date('now', '-7 days')`).get(userId);
-    
-    // 排名
-    const allUsers = db.prepare(`SELECT user_id, avg_mastery FROM v_leaderboard ORDER BY avg_mastery DESC`).all();
-    const rank = allUsers.findIndex(u => u.user_id === userId) + 1;
-    
-    // 最近活動
-    const recentActivity = db.prepare(`
-      SELECT DATE(answered_at) as date, COUNT(*) as count
-      FROM user_answers WHERE user_id = ? 
-      GROUP BY DATE(answered_at) ORDER BY date DESC LIMIT 7`).all(userId);
-    
-    db.close();
-    res.json({ success: true, data: { userId, overview, today, week, rank: { current: rank, total: allUsers.length }, recentActivity }});
-  } catch (err) { db.close(); res.status(500).json({ success: false, error: err.message }); }
+function getDb() {
+  if (!db) {
+    db = new sqlite3.Database(DB_PATH, (err) => {
+      if (err) console.error('Analytics DB error:', err);
+      else console.log('✅ analytics_routes: education.db 連線成功');
+    });
+  }
+  return db;
+}
+
+getDb();
+
+const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
+  getDb().all(sql, params, (err, rows) => err ? reject(err) : resolve(rows));
 });
 
-// GET /analytics/trends/:userId - 學習趨勢
-router.get('/trends/:userId', (req, res) => {
-  const db = getDb();
+const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
+  getDb().get(sql, params, (err, row) => err ? reject(err) : resolve(row));
+});
+
+// GET /api/analytics/dashboard/:userId
+router.get('/dashboard/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // 總覽
+    const overview = await dbGet(`
+      SELECT 
+        COUNT(DISTINCT node_id) as nodes_studied,
+        ROUND(AVG(mastery_level), 1) as avg_mastery,
+        SUM(total_questions) as total_questions,
+        SUM(correct_count) as total_correct,
+        MAX(streak_days) as streak_days
+      FROM user_progress WHERE user_id = ?
+    `, [userId]) || {};
+
+    // 今日
+    const today = await dbGet(`
+      SELECT 
+        COUNT(*) as questions,
+        SUM(is_correct) as correct
+      FROM user_answers 
+      WHERE user_id = ? AND DATE(answered_at) = DATE('now')
+    `, [userId]) || { questions: 0, correct: 0 };
+
+    // 錯題數
+    const wrongCount = await dbGet(`
+      SELECT COUNT(*) as cnt FROM user_answers 
+      WHERE user_id = ? AND is_correct = 0
+    `, [userId]);
+    overview.wrong_count = wrongCount?.cnt || 0;
+
+    // 最近7天活動
+    const recentActivity = await dbAll(`
+      SELECT DATE(answered_at) as date, COUNT(*) as count
+      FROM user_answers 
+      WHERE user_id = ? AND answered_at >= DATE('now', '-7 days')
+      GROUP BY DATE(answered_at)
+      ORDER BY date
+    `, [userId]);
+
+    res.json({ 
+      success: true, 
+      data: { overview, today, recentActivity, rank: { current: null } } 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/analytics/trends/:userId
+router.get('/trends/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { days = 30 } = req.query;
-    
-    // 每日答題趨勢
-    const dailyTrend = db.prepare(`
-      SELECT DATE(answered_at) as date, 
-        COUNT(*) as questions, 
-        SUM(is_correct) as correct,
-        ROUND(AVG(is_correct)*100, 1) as accuracy
-      FROM user_answers WHERE user_id = ? AND answered_at >= date('now', '-' || ? || ' days')
-      GROUP BY DATE(answered_at) ORDER BY date`).all(userId, days);
-    
-    // 按科目趨勢
-    const subjectTrend = db.prepare(`
-      SELECT subject_id, 
+
+    const dailyTrend = await dbAll(`
+      SELECT 
+        DATE(answered_at) as date,
         COUNT(*) as total,
         SUM(is_correct) as correct,
-        ROUND(AVG(is_correct)*100, 1) as accuracy
-      FROM user_answers WHERE user_id = ? AND subject_id != ''
-      GROUP BY subject_id ORDER BY total DESC`).all(userId);
-    
-    // 掌握度變化 (按週)
-    const masteryTrend = db.prepare(`
-      SELECT strftime('%Y-W%W', last_studied_at) as week,
-        ROUND(AVG(mastery_level), 1) as avg_mastery,
-        COUNT(*) as nodes
-      FROM user_progress WHERE user_id = ?
-      GROUP BY week ORDER BY week DESC LIMIT 8`).all(userId);
-    
-    db.close();
-    res.json({ success: true, data: { userId, dailyTrend, subjectTrend, masteryTrend }});
-  } catch (err) { db.close(); res.status(500).json({ success: false, error: err.message }); }
+        ROUND(AVG(is_correct) * 100, 1) as accuracy
+      FROM user_answers 
+      WHERE user_id = ? AND answered_at >= DATE('now', '-' || ? || ' days')
+      GROUP BY DATE(answered_at)
+      ORDER BY date
+    `, [userId, days]);
+
+    const subjectTrend = await dbAll(`
+      SELECT 
+        subject_id,
+        COUNT(*) as total,
+        SUM(is_correct) as correct,
+        ROUND(AVG(is_correct) * 100, 1) as accuracy
+      FROM user_answers 
+      WHERE user_id = ? AND subject_id != ''
+      GROUP BY subject_id
+      ORDER BY total DESC
+    `, [userId]);
+
+    res.json({ success: true, data: { dailyTrend, subjectTrend } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
-// GET /analytics/weakness/:userId - 弱點分析
-router.get('/weakness/:userId', (req, res) => {
-  const db = getDb();
+// GET /api/analytics/weakness/:userId
+router.get('/weakness/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    
-    // 弱點科目 (正確率最低)
-    const weakSubjects = db.prepare(`
-      SELECT subject_id, 
+
+    const weakSubjects = await dbAll(`
+      SELECT 
+        subject_id,
         COUNT(*) as total,
         SUM(is_correct) as correct,
-        ROUND(AVG(is_correct)*100, 1) as accuracy
-      FROM user_answers WHERE user_id = ? AND subject_id != ''
+        ROUND(AVG(is_correct) * 100, 1) as accuracy
+      FROM user_answers 
+      WHERE user_id = ? AND subject_id != ''
       GROUP BY subject_id
       HAVING accuracy < 70
-      ORDER BY accuracy ASC LIMIT 5`).all(userId);
-    
-    // 弱點節點 (mastery < 70)
-    const weakNodes = db.prepare(`
-      SELECT p.node_id, p.subject_id, p.mastery_level, p.total_questions, p.correct_count,
-        n.node_name, n.chapter_id
-      FROM user_progress p
-      LEFT JOIN xtf_nodes_v2 n ON p.node_id = n.node_id
-      WHERE p.user_id = ? AND p.mastery_level < 70
-      ORDER BY p.mastery_level ASC LIMIT 10`).all(userId);
-    
-    // 高錯誤率題目
-    const highErrorQuestions = db.prepare(`
-      SELECT question_id, node_id, COUNT(*) as attempts, 
-        SUM(is_correct) as correct,
-        ROUND(AVG(is_correct)*100, 1) as accuracy
-      FROM user_answers WHERE user_id = ?
-      GROUP BY question_id
-      HAVING attempts >= 2 AND accuracy < 50
-      ORDER BY accuracy ASC LIMIT 10`).all(userId);
-    
-    // 推薦複習
-    const recommendations = weakNodes.slice(0, 5).map(n => ({
+      ORDER BY accuracy ASC
+      LIMIT 5
+    `, [userId]);
+
+    const weakNodes = await dbAll(`
+      SELECT node_id, subject_id, mastery_level, total_questions
+      FROM user_progress 
+      WHERE user_id = ? AND mastery_level < 60
+      ORDER BY mastery_level ASC
+      LIMIT 10
+    `, [userId]);
+
+    // 學習建議
+    const recommendations = weakNodes.slice(0, 3).map(n => ({
       nodeId: n.node_id,
-      nodeName: n.node_name,
-      currentMastery: n.mastery_level,
-      reason: n.mastery_level < 50 ? '急需加強' : '建議複習'
+      nodeName: n.node_id,
+      reason: `掌握度 ${n.mastery_level}%，建議加強練習`
     }));
-    
-    db.close();
-    res.json({ success: true, data: { userId, weakSubjects, weakNodes, highErrorQuestions, recommendations }});
-  } catch (err) { db.close(); res.status(500).json({ success: false, error: err.message }); }
+
+    res.json({ success: true, data: { weakSubjects, weakNodes, recommendations } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
-// GET /leaderboard - 排行榜
-router.get('/leaderboard', (req, res) => {
-  const db = getDb();
+// GET /api/analytics/leaderboard
+router.get('/leaderboard', async (req, res) => {
   try {
-    const { limit = 20, type = 'mastery' } = req.query;
-    
+    const { type = 'mastery', limit = 20 } = req.query;
+
     let orderBy = 'avg_mastery DESC';
     if (type === 'questions') orderBy = 'total_questions DESC';
     if (type === 'accuracy') orderBy = 'accuracy DESC';
-    if (type === 'nodes') orderBy = 'nodes_count DESC';
-    
-    const leaderboard = db.prepare(`
-      SELECT user_id, avg_mastery, total_questions, total_correct, accuracy, nodes_count, last_active
-      FROM v_leaderboard
+
+    const leaderboard = await dbAll(`
+      SELECT 
+        user_id,
+        ROUND(AVG(mastery_level), 1) as avg_mastery,
+        SUM(total_questions) as total_questions,
+        SUM(correct_count) as total_correct,
+        ROUND(SUM(correct_count) * 100.0 / NULLIF(SUM(total_questions), 0), 1) as accuracy,
+        COUNT(DISTINCT node_id) as nodes_count
+      FROM user_progress
+      GROUP BY user_id
       ORDER BY ${orderBy}
-      LIMIT ?`).all(parseInt(limit));
-    
-    // 加入排名
-    const ranked = leaderboard.map((user, idx) => ({ rank: idx + 1, ...user }));
-    
-    db.close();
-    res.json({ success: true, data: { type, leaderboard: ranked }});
-  } catch (err) { db.close(); res.status(500).json({ success: false, error: err.message }); }
+      LIMIT ?
+    `, [parseInt(limit)]);
+
+    // 加排名
+    const ranked = leaderboard.map((u, i) => ({ ...u, rank: i + 1 }));
+
+    res.json({ success: true, data: { leaderboard: ranked, type } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 module.exports = router;

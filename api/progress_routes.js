@@ -1,104 +1,117 @@
 /**
- * progress_routes.js - 學習進度 API
- * 北斗教育 v2.0
+ * progress_routes.js - 學習進度 API (P1)
+ * 使用 sqlite3 (async callback style)
  */
 
 const express = require('express');
 const router = express.Router();
-const Database = require('better-sqlite3');
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const dbPath = process.env.DB_PATH || './education.db';
-function getDb() { return new Database(path.resolve(__dirname, dbPath)); }
+// DB 連線
+const DB_PATH = process.env.EDU_DB_PATH || './education.db';
+let db = null;
 
-// GET /progress/:userId - 取得用戶所有進度
-router.get('/:userId', (req, res) => {
-  const db = getDb();
+function getDb() {
+  if (!db) {
+    db = new sqlite3.Database(DB_PATH, (err) => {
+      if (err) console.error('Progress DB error:', err);
+      else console.log('✅ progress_routes: education.db 連線成功');
+    });
+  }
+  return db;
+}
+
+// 初始化連線
+getDb();
+
+// 輔助函數: Promise 包裝
+const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
+  getDb().all(sql, params, (err, rows) => err ? reject(err) : resolve(rows));
+});
+
+const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
+  getDb().get(sql, params, (err, row) => err ? reject(err) : resolve(row));
+});
+
+const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
+  getDb().run(sql, params, function(err) {
+    err ? reject(err) : resolve({ lastID: this.lastID, changes: this.changes });
+  });
+});
+
+// GET /api/progress/:userId - 取得用戶進度
+router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { subject } = req.query;
-    
-    let sql = `SELECT p.*, n.node_name, n.chapter_id
-      FROM user_progress p
-      LEFT JOIN xtf_nodes_v2 n ON p.node_id = n.node_id
-      WHERE p.user_id = ?`;
-    const params = [userId];
-    
-    if (subject) { sql += ' AND p.subject_id = ?'; params.push(subject); }
-    sql += ' ORDER BY p.subject_id, p.node_id';
-    
-    const progress = db.prepare(sql).all(...params);
-    const summary = db.prepare(`
-      SELECT COUNT(DISTINCT node_id) as nodes_studied,
+    const progress = await dbAll(
+      'SELECT * FROM user_progress WHERE user_id = ? ORDER BY last_studied_at DESC',
+      [userId]
+    );
+    res.json({ success: true, data: { userId, progress } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/progress/summary/:userId - 進度摘要
+router.get('/summary/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const summary = await dbGet(`
+      SELECT 
+        COUNT(DISTINCT node_id) as nodes_studied,
         COUNT(DISTINCT subject_id) as subjects_studied,
         ROUND(AVG(mastery_level), 1) as avg_mastery,
         SUM(total_questions) as total_questions,
-        SUM(correct_count) as total_correct
-      FROM user_progress WHERE user_id = ?`).get(userId);
-    
-    db.close();
-    res.json({ success: true, data: { userId, summary, progress }});
-  } catch (err) { db.close(); res.status(500).json({ success: false, error: err.message }); }
+        SUM(correct_count) as total_correct,
+        MAX(streak_days) as max_streak
+      FROM user_progress WHERE user_id = ?
+    `, [userId]);
+    res.json({ success: true, data: summary || {} });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
-// POST /progress/update - 更新進度
-router.post('/update', (req, res) => {
-  const db = getDb();
+// POST /api/progress/update - 更新進度
+router.post('/update', async (req, res) => {
   try {
-    const { userId, nodeId, subjectId, isCorrect } = req.body;
-    if (!userId || !nodeId) return res.status(400).json({ success: false, error: 'userId and nodeId required' });
+    const { userId, nodeId, subjectId, correct, total } = req.body;
     
-    const existing = db.prepare('SELECT * FROM user_progress WHERE user_id = ? AND node_id = ?').get(userId, nodeId);
-    
-    if (existing) {
-      const ts = existing.total_questions + 1;
-      const tc = existing.correct_count + (isCorrect ? 1 : 0);
-      const tw = existing.wrong_count + (isCorrect ? 0 : 1);
-      const ml = Math.round((tc / ts) * 100);
-      db.prepare(`UPDATE user_progress SET total_questions=?, correct_count=?, wrong_count=?, mastery_level=?, 
-        last_studied_at=datetime('now'), updated_at=datetime('now') WHERE user_id=? AND node_id=?`).run(ts, tc, tw, ml, userId, nodeId);
-    } else {
-      db.prepare(`INSERT INTO user_progress (user_id, node_id, subject_id, total_questions, correct_count, wrong_count, mastery_level, last_studied_at)
-        VALUES (?, ?, ?, 1, ?, ?, ?, datetime('now'))`).run(userId, nodeId, subjectId||'', isCorrect?1:0, isCorrect?0:1, isCorrect?100:0);
+    if (!userId || !nodeId) {
+      return res.status(400).json({ success: false, error: '缺少必要參數' });
     }
-    
-    const updated = db.prepare('SELECT * FROM user_progress WHERE user_id = ? AND node_id = ?').get(userId, nodeId);
-    db.close();
-    res.json({ success: true, data: updated });
-  } catch (err) { db.close(); res.status(500).json({ success: false, error: err.message }); }
-});
 
-// GET /progress/summary/:userId - 進度摘要
-router.get('/summary/:userId', (req, res) => {
-  const db = getDb();
-  try {
-    const { userId } = req.params;
-    const bySubject = db.prepare(`SELECT subject_id, COUNT(*) as nodes_count, ROUND(AVG(mastery_level),1) as avg_mastery,
-      SUM(total_questions) as total_studied, SUM(correct_count) as total_correct
-      FROM user_progress WHERE user_id = ? GROUP BY subject_id ORDER BY avg_mastery DESC`).all(userId);
-    
-    const overall = db.prepare(`SELECT COUNT(DISTINCT node_id) as total_nodes, ROUND(AVG(mastery_level),1) as overall_mastery,
-      SUM(total_questions) as total_questions, SUM(correct_count) as total_correct, MAX(last_studied_at) as last_active
-      FROM user_progress WHERE user_id = ?`).get(userId);
-    
-    db.close();
-    res.json({ success: true, data: { userId, overall, bySubject }});
-  } catch (err) { db.close(); res.status(500).json({ success: false, error: err.message }); }
-});
+    // Upsert
+    const existing = await dbGet(
+      'SELECT * FROM user_progress WHERE user_id = ? AND node_id = ?',
+      [userId, nodeId]
+    );
 
-// GET /progress/subject/:userId/:subjectId - 科目詳細進度
-router.get('/subject/:userId/:subjectId', (req, res) => {
-  const db = getDb();
-  try {
-    const { userId, subjectId } = req.params;
-    const nodes = db.prepare(`SELECT p.*, n.node_name, n.chapter_id, n.node_type
-      FROM user_progress p JOIN xtf_nodes_v2 n ON p.node_id = n.node_id
-      WHERE p.user_id = ? AND p.subject_id = ? ORDER BY p.mastery_level ASC`).all(userId, subjectId);
-    
-    const weakNodes = nodes.filter(n => n.mastery_level < 70);
-    db.close();
-    res.json({ success: true, data: { userId, subjectId, nodes, weakNodes, stats: { total: nodes.length, weak: weakNodes.length }}});
-  } catch (err) { db.close(); res.status(500).json({ success: false, error: err.message }); }
+    if (existing) {
+      const newTotal = (existing.total_questions || 0) + (total || 1);
+      const newCorrect = (existing.correct_count || 0) + (correct || 0);
+      const mastery = Math.round(newCorrect / newTotal * 100);
+      
+      await dbRun(`
+        UPDATE user_progress SET 
+          total_questions = ?, correct_count = ?, mastery_level = ?,
+          last_studied_at = datetime('now'), updated_at = datetime('now')
+        WHERE user_id = ? AND node_id = ?
+      `, [newTotal, newCorrect, mastery, userId, nodeId]);
+    } else {
+      const mastery = total > 0 ? Math.round((correct || 0) / total * 100) : 0;
+      await dbRun(`
+        INSERT INTO user_progress (user_id, node_id, subject_id, total_questions, correct_count, mastery_level, last_studied_at)
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+      `, [userId, nodeId, subjectId || '', total || 1, correct || 0, mastery]);
+    }
+
+    res.json({ success: true, message: '進度已更新' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 module.exports = router;
