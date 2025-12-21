@@ -1,5 +1,5 @@
 /**
- * 北斗教育 API Server v7.5.1
+ * 北斗教育 API Server v7.5.2
  * 混合式架構：SQLite (題庫) + MongoDB (用戶)
  * 
  * 北斗七星文創數位有限公司 © 2025
@@ -181,7 +181,7 @@ app.get('/health', (req, res) => {
   
   res.json({ 
     status: 'ok', 
-    version: '7.5.1',
+    version: '7.5.2',
     timestamp: new Date().toISOString(),
     uptime: Math.floor(process.uptime()),
     environment: process.env.NODE_ENV || 'development',
@@ -201,7 +201,7 @@ app.get('/health', (req, res) => {
 app.get('/api', (req, res) => {
   res.json({
     name: '北斗教育 API',
-    version: '7.5.1',
+    version: '7.5.2',
     architecture: '混合式 (SQLite + MongoDB)',
     endpoints: [
       'GET  /health - 健康檢查',
@@ -881,7 +881,7 @@ async function startServer() {
   // 啟動
   app.listen(PORT, () => {
     console.log('================================================');
-    console.log(`🚀 北斗教育 API Server v7.5.1`);
+    console.log(`🚀 北斗教育 API Server v7.5.2`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`📊 SQLite: ${DB_PATH}`);
     console.log(`📦 MongoDB: ${getConnectionStatus().connected ? '已連線' : '未連線'}`);
@@ -1024,9 +1024,9 @@ app.get('/api/quiz/gsat/questions', async (req, res) => {
       SELECT 
         id,
         subject_category as subject,
-        question_text as question,
-        option_a, option_b, option_c, option_d,
-        correct_answer as answer,
+        question,
+        options,
+        answer,
         explanation,
         difficulty
       FROM gsat_generated_questions
@@ -1047,15 +1047,24 @@ app.get('/api/quiz/gsat/questions', async (req, res) => {
     
     const rows = await dbAll(sql, params);
     
-    const questions = rows.map(q => ({
-      id: q.id,
-      subject: q.subject,
-      question: q.question,
-      options: [q.option_a, q.option_b, q.option_c, q.option_d].filter(Boolean),
-      answer: q.answer,
-      explanation: q.explanation,
-      difficulty: q.difficulty
-    }));
+    // options 是 JSON 字串，需要解析
+    const questions = rows.map(q => {
+      let opts = [];
+      try {
+        opts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+      } catch(e) {
+        opts = [q.options];
+      }
+      return {
+        id: q.id,
+        subject: q.subject,
+        question: q.question,
+        options: Array.isArray(opts) ? opts : [opts],
+        answer: q.answer,
+        explanation: q.explanation,
+        difficulty: q.difficulty
+      };
+    });
     
     res.json({ success: true, data: questions, count: questions.length });
   } catch (error) {
