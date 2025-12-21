@@ -226,7 +226,7 @@ app.get('/health', (req, res) => {
   
   res.json({ 
     status: 'ok', 
-    version: '7.7.0',
+    version: '7.7.1',
     timestamp: new Date().toISOString(),
     uptime: Math.floor(process.uptime()),
     environment: process.env.NODE_ENV || 'development',
@@ -246,7 +246,7 @@ app.get('/health', (req, res) => {
 app.get('/api', (req, res) => {
   res.json({
     name: '北斗教育 API',
-    version: '7.7.0',
+    version: '7.7.1',
     architecture: '混合式 (SQLite + MongoDB)',
     endpoints: [
       'GET  /health - 健康檢查',
@@ -1079,6 +1079,55 @@ async function startServer() {
           nodesStudied: progress?.nodes_studied || 0,
           avgMastery: Math.round(progress?.avg_mastery || 0)
         }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // 排行榜 API
+  app.get('/api/analytics/leaderboard', async (req, res) => {
+    try {
+      const { type = 'mastery', limit = 20 } = req.query;
+      const rtDb = getRuntimeDb();
+      
+      let sql;
+      if (type === 'mastery') {
+        sql = `
+          SELECT 
+            user_id,
+            COUNT(*) as nodes_studied,
+            AVG(mastery) as avg_mastery,
+            SUM(correct) as total_correct
+          FROM user_progress
+          GROUP BY user_id
+          ORDER BY avg_mastery DESC, total_correct DESC
+          LIMIT ?
+        `;
+      } else {
+        sql = `
+          SELECT 
+            user_id,
+            COUNT(*) as total_answers,
+            SUM(is_correct) as correct_answers,
+            ROUND(100.0 * SUM(is_correct) / COUNT(*), 1) as accuracy
+          FROM user_answers
+          GROUP BY user_id
+          ORDER BY correct_answers DESC, accuracy DESC
+          LIMIT ?
+        `;
+      }
+      
+      rtDb.all(sql, [parseInt(limit)], (err, rows) => {
+        if (err) return res.status(500).json({ success: false, error: err.message });
+        
+        // 加入排名
+        const ranked = (rows || []).map((row, idx) => ({
+          rank: idx + 1,
+          ...row
+        }));
+        
+        res.json({ success: true, data: ranked });
       });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
