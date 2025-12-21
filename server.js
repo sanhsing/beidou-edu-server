@@ -1,5 +1,5 @@
 /**
- * 北斗教育 API Server v7.2
+ * 北斗教育 API Server v7.5
  * 混合式架構：SQLite (題庫) + MongoDB (用戶)
  * 
  * 北斗七星文創數位有限公司 © 2025
@@ -846,6 +846,34 @@ async function startServer() {
   }
   
   // 404 handler（必須在所有路由之後）
+
+  // 掛載學習進度路由 (P1新增)
+  try {
+    const progressRouter = require('./api/progress_routes');
+    app.use('/api/progress', progressRouter);
+    console.log('✅ 已載入: progress_routes (學習進度)');
+  } catch (e) {
+    console.log('⚠️ progress_routes 載入失敗:', e.message);
+  }
+  
+  // 掛載答題記錄路由 (P1新增)
+  try {
+    const answersRouter = require('./api/answers_routes');
+    app.use('/api/answers', answersRouter);
+    console.log('✅ 已載入: answers_routes (答題記錄)');
+  } catch (e) {
+    console.log('⚠️ answers_routes 載入失敗:', e.message);
+  }
+  
+  // 掛載統計分析路由 (P1新增)
+  try {
+    const analyticsRouter = require('./api/analytics_routes');
+    app.use('/api/analytics', analyticsRouter);
+    console.log('✅ 已載入: analytics_routes (統計分析)');
+  } catch (e) {
+    console.log('⚠️ analytics_routes 載入失敗:', e.message);
+  }
+
   app.use((req, res) => {
     res.status(404).json({ success: false, error: '找不到此路徑' });
   });
@@ -853,7 +881,7 @@ async function startServer() {
   // 啟動
   app.listen(PORT, () => {
     console.log('================================================');
-    console.log(`🚀 北斗教育 API Server v7.4`);
+    console.log(`🚀 北斗教育 API Server v7.5`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`📊 SQLite: ${DB_PATH}`);
     console.log(`📦 MongoDB: ${getConnectionStatus().connected ? '已連線' : '未連線'}`);
