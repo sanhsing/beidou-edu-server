@@ -1,5 +1,5 @@
 /**
- * 北斗教育 API Server v7.8.0
+ * 北斗教育 API Server v7.8.1
  * 混合式架構：SQLite (題庫) + MongoDB (用戶)
  * 
  * 北斗七星文創數位有限公司 © 2025
@@ -37,7 +37,8 @@ app.use(cors({
     'https://sanhsing.github.io',
     'https://beidou.edu.tw',
     'https://beidou-landing.onrender.com',
-    'https://beidou-edu.onrender.com'
+    'https://beidou-edu.onrender.com',
+    'https://beidou-edu-server-1.onrender.com'
   ],
   credentials: true
 }));
@@ -1327,7 +1328,7 @@ async function startServer() {
   // 啟動
   app.listen(PORT, () => {
     console.log('================================================');
-    console.log(`🚀 北斗教育 API Server v7.8.0`);
+    console.log(`🚀 北斗教育 API Server v7.8.1`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`📊 SQLite: ${DB_PATH}`);
     console.log(`📦 MongoDB: ${getConnectionStatus().connected ? '已連線' : '未連線'}`);
