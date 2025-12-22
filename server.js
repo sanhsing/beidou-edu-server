@@ -1,5 +1,5 @@
 /**
- * 北斗教育 API Server v7.7.0
+ * 北斗教育 API Server v7.8.0
  * 混合式架構：SQLite (題庫) + MongoDB (用戶)
  * 
  * 北斗七星文創數位有限公司 © 2025
@@ -1327,7 +1327,7 @@ async function startServer() {
   // 啟動
   app.listen(PORT, () => {
     console.log('================================================');
-    console.log(`🚀 北斗教育 API Server v7.7.0`);
+    console.log(`🚀 北斗教育 API Server v7.8.0`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`📊 SQLite: ${DB_PATH}`);
     console.log(`📦 MongoDB: ${getConnectionStatus().connected ? '已連線' : '未連線'}`);
@@ -1521,3 +1521,235 @@ app.get('/api/quiz/gsat/questions', async (req, res) => {
 
 
 module.exports = app;
+
+// ============================================================
+// API v2 - 新題型支援 (2025-12-22)
+// ============================================================
+
+// v2 統一題庫查詢
+app.get('/api/v2/questions', async (req, res) => {
+  try {
+    const { subject, level, count = 10 } = req.query;
+    const limit = Math.min(parseInt(count), 50);
+    
+    let sql = `SELECT * FROM unified_question_bank WHERE 1=1`;
+    const params = [];
+    
+    if (subject) {
+      sql += ` AND subject = ?`;
+      params.push(subject);
+    }
+    if (level) {
+      sql += ` AND exam_level = ?`;
+      params.push(level);
+    }
+    
+    sql += ` ORDER BY RANDOM() LIMIT ?`;
+    params.push(limit);
+    
+    const rows = await dbAll(sql, params);
+    
+    const questions = rows.map(row => ({
+      id: row.id,
+      type: 'single_choice',
+      subject: row.subject,
+      topic: row.topic,
+      level: row.exam_level,
+      stem: row.stem,
+      options: JSON.parse(row.options || '[]'),
+      answer: row.answer,
+      explanation: row.explanation,
+      difficulty: row.difficulty,
+      quality: row.quality_score
+    }));
+    
+    res.json({ success: true, data: questions, count: questions.length });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// v2 新題型查詢 (matching/ordering/fill_blank/multiple_select)
+app.get('/api/v2/types/:type', async (req, res) => {
+  try {
+    const validTypes = ['matching', 'ordering', 'fill_blank', 'multiple_select'];
+    const qType = req.params.type;
+    
+    if (!validTypes.includes(qType)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Invalid type. Use: ${validTypes.join(', ')}` 
+      });
+    }
+    
+    const { subject, count = 10 } = req.query;
+    const limit = Math.min(parseInt(count), 50);
+    
+    let sql = `SELECT * FROM new_question_types WHERE question_type = ?`;
+    const params = [qType];
+    
+    if (subject) {
+      sql += ` AND subject = ?`;
+      params.push(subject);
+    }
+    
+    sql += ` ORDER BY RANDOM() LIMIT ?`;
+    params.push(limit);
+    
+    const rows = await dbAll(sql, params);
+    
+    const questions = rows.map(row => {
+      const base = {
+        id: row.id,
+        type: row.question_type,
+        subject: row.subject,
+        template: row.template_key,
+        difficulty: row.difficulty
+      };
+      
+      switch (row.question_type) {
+        case 'matching':
+          const items = JSON.parse(row.items_json);
+          return { ...base, instruction: row.stem, leftItems: items.left, rightItems: items.right, answer: JSON.parse(row.answer_json) };
+        case 'ordering':
+          return { ...base, instruction: row.stem, items: JSON.parse(row.items_json), answer: JSON.parse(row.answer_json) };
+        case 'fill_blank':
+          return { ...base, stem: row.stem, hint: JSON.parse(row.items_json).hint || '', answer: JSON.parse(row.answer_json) };
+        case 'multiple_select':
+          return { ...base, stem: row.stem, options: JSON.parse(row.items_json), answer: JSON.parse(row.answer_json) };
+        default:
+          return base;
+      }
+    });
+    
+    res.json({ success: true, data: questions, count: questions.length });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// v2 混合題型試卷
+app.get('/api/v2/mixed-exam/:subject', async (req, res) => {
+  try {
+    const subject = req.params.subject;
+    const { single = 10, matching = 2, ordering = 2, fill_blank = 3, multiple_select = 3 } = req.query;
+    
+    const questions = [];
+    
+    // 單選題
+    if (parseInt(single) > 0) {
+      const rows = await dbAll(
+        `SELECT * FROM unified_question_bank WHERE subject = ? ORDER BY RANDOM() LIMIT ?`,
+        [subject, parseInt(single)]
+      );
+      questions.push(...rows.map(r => ({ ...r, type: 'single_choice', options: JSON.parse(r.options || '[]') })));
+    }
+    
+    // 新題型
+    const types = [
+      { name: 'matching', count: parseInt(matching) },
+      { name: 'ordering', count: parseInt(ordering) },
+      { name: 'fill_blank', count: parseInt(fill_blank) },
+      { name: 'multiple_select', count: parseInt(multiple_select) }
+    ];
+    
+    for (const t of types) {
+      if (t.count > 0) {
+        const rows = await dbAll(
+          `SELECT * FROM new_question_types WHERE question_type = ? AND subject = ? ORDER BY RANDOM() LIMIT ?`,
+          [t.name, subject, t.count]
+        );
+        questions.push(...rows.map(r => ({ ...r, type: r.question_type })));
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      data: {
+        subject,
+        totalQuestions: questions.length,
+        questions,
+        generatedAt: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// v2 通用答案驗證
+app.post('/api/v2/check', async (req, res) => {
+  try {
+    const { type, questionId, answer } = req.body;
+    
+    if (type === 'single_choice') {
+      const row = await dbGet(`SELECT answer, explanation FROM unified_question_bank WHERE id = ?`, [questionId]);
+      if (!row) return res.json({ success: false, error: 'Question not found' });
+      return res.json({ success: true, data: { correct: row.answer === answer, correctAnswer: row.answer, explanation: row.explanation }});
+    }
+    
+    // 新題型
+    const row = await dbGet(`SELECT answer_json, question_type FROM new_question_types WHERE id = ?`, [questionId]);
+    if (!row) return res.json({ success: false, error: 'Question not found' });
+    
+    const correctAnswer = JSON.parse(row.answer_json);
+    let correct = false;
+    let score = 0;
+    
+    switch (row.question_type) {
+      case 'matching':
+      case 'ordering':
+        correct = JSON.stringify(answer) === JSON.stringify(correctAnswer);
+        score = correct ? 100 : 0;
+        break;
+      case 'fill_blank':
+        correct = String(answer).toLowerCase() === String(correctAnswer).toLowerCase();
+        score = correct ? 100 : 0;
+        break;
+      case 'multiple_select':
+        const userSet = new Set(answer);
+        const correctSet = new Set(correctAnswer);
+        const correctCount = [...userSet].filter(x => correctSet.has(x)).length;
+        const wrongCount = [...userSet].filter(x => !correctSet.has(x)).length;
+        if (wrongCount === 0 && correctCount === correctSet.size) { score = 100; correct = true; }
+        else if (wrongCount <= 1) { score = 60; }
+        else if (wrongCount <= 2) { score = 20; }
+        break;
+    }
+    
+    res.json({ success: true, data: { correct, score, correctAnswer, userAnswer: answer }});
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// v2 完整統計
+app.get('/api/v2/stats', async (req, res) => {
+  try {
+    const unifiedStats = await dbAll(`
+      SELECT subject, exam_level, COUNT(*) as total, ROUND(AVG(quality_score), 1) as avgQuality
+      FROM unified_question_bank GROUP BY subject, exam_level ORDER BY subject, exam_level
+    `);
+    
+    const newTypeStats = await dbAll(`
+      SELECT question_type, subject, COUNT(*) as total
+      FROM new_question_types GROUP BY question_type, subject ORDER BY question_type, subject
+    `);
+    
+    const unifiedTotal = (await dbGet(`SELECT COUNT(*) as c FROM unified_question_bank`)).c;
+    const newTypeTotal = (await dbGet(`SELECT COUNT(*) as c FROM new_question_types`)).c;
+    
+    res.json({ 
+      success: true, 
+      data: {
+        unified: { total: unifiedTotal, bySubjectLevel: unifiedStats },
+        newTypes: { total: newTypeTotal, byTypeSubject: newTypeStats },
+        grandTotal: unifiedTotal + newTypeTotal
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+console.log('✅ API v2 路由已載入 (新題型支援)');
