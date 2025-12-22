@@ -933,6 +933,15 @@ async function startServer() {
     console.log('⚠️ quiz_routes 載入失敗:', e.message);
   }
   
+  // 掛載閃卡路由
+  try {
+    const flashcardRouter = require('./api/flashcard_routes');
+    app.use('/api/flashcards', flashcardRouter);
+    console.log('✅ 已載入: flashcard_routes (閃卡API)');
+  } catch (e) {
+    console.log('⚠️ flashcard_routes 載入失敗:', e.message);
+  }
+  
   // ============================================================
   // 內建 Progress API (使用 runtime.db)
   // ============================================================
@@ -1754,3 +1763,415 @@ app.get('/api/v2/stats', async (req, res) => {
 });
 
 console.log('✅ API v2 路由已載入 (新題型支援)');
+
+// ============================================================
+// API v3 - 補齊缺失端點 (2025-12-22)
+// SQLite 版本，不依賴 MongoDB
+// ============================================================
+
+// 初始化 runtime.db 用戶表
+getRuntimeDb().run(`
+  CREATE TABLE IF NOT EXISTS local_users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    username TEXT,
+    grade TEXT DEFAULT '高三',
+    coins INTEGER DEFAULT 100,
+    xp INTEGER DEFAULT 0,
+    level INTEGER DEFAULT 1,
+    streak INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    last_login TEXT
+  )
+`);
+
+getRuntimeDb().run(`
+  CREATE TABLE IF NOT EXISTS local_progress (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    subject TEXT,
+    correct INTEGER DEFAULT 0,
+    total INTEGER DEFAULT 0,
+    xp_earned INTEGER DEFAULT 0,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+getRuntimeDb().run(`
+  CREATE TABLE IF NOT EXISTS local_wrong_answers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    question_id INTEGER,
+    subject TEXT,
+    user_answer TEXT,
+    correct_answer TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+// A1: /api/auth/register (SQLite 版)
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, username, grade } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: '請填寫 email 和密碼' });
+    }
+    
+    // 簡單 hash (生產環境應用 bcrypt)
+    const crypto = require('crypto');
+    const hash = crypto.createHash('sha256').update(password + 'beidou-salt').digest('hex');
+    
+    const result = await new Promise((resolve, reject) => {
+      getRuntimeDb().run(
+        `INSERT INTO local_users (email, password_hash, username, grade) VALUES (?, ?, ?, ?)`,
+        [email, hash, username || email.split('@')[0], grade || '高三'],
+        function(err) {
+          if (err) reject(err);
+          else resolve({ lastID: this.lastID });
+        }
+      );
+    });
+    
+    // 生成簡易 token
+    const token = Buffer.from(JSON.stringify({ userId: result.lastID, email })).toString('base64');
+    
+    res.json({
+      success: true,
+      data: {
+        token,
+        user: { id: result.lastID, email, username: username || email.split('@')[0] }
+      }
+    });
+  } catch (error) {
+    if (error.message?.includes('UNIQUE')) {
+      return res.status(400).json({ success: false, error: 'Email 已被註冊' });
+    }
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// A2: /api/auth/login (SQLite 版)
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: '請填寫 email 和密碼' });
+    }
+    
+    const crypto = require('crypto');
+    const hash = crypto.createHash('sha256').update(password + 'beidou-salt').digest('hex');
+    
+    const user = await new Promise((resolve, reject) => {
+      getRuntimeDb().get(
+        `SELECT * FROM local_users WHERE email = ? AND password_hash = ?`,
+        [email, hash],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+    
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Email 或密碼錯誤' });
+    }
+    
+    // 更新最後登入
+    getRuntimeDb().run(`UPDATE local_users SET last_login = ? WHERE id = ?`, [new Date().toISOString(), user.id]);
+    
+    const token = Buffer.from(JSON.stringify({ userId: user.id, email })).toString('base64');
+    
+    res.json({
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          grade: user.grade,
+          coins: user.coins,
+          xp: user.xp,
+          level: user.level,
+          streak: user.streak
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// /api/auth/me
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ success: false, error: '未提供 Token' });
+    }
+    
+    const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
+    const user = await new Promise((resolve, reject) => {
+      getRuntimeDb().get(`SELECT * FROM local_users WHERE id = ?`, [decoded.userId], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+    
+    if (!user) {
+      return res.status(401).json({ success: false, error: '用戶不存在' });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        grade: user.grade,
+        coins: user.coins,
+        xp: user.xp,
+        level: user.level,
+        streak: user.streak
+      }
+    });
+  } catch (error) {
+    res.status(401).json({ success: false, error: '認證失敗' });
+  }
+});
+
+// A3: /api/v2/subjects
+app.get('/api/v2/subjects', async (req, res) => {
+  try {
+    const subjects = await dbAll(`
+      SELECT DISTINCT subject, COUNT(*) as count 
+      FROM unified_question_bank 
+      GROUP BY subject 
+      ORDER BY count DESC
+    `);
+    
+    res.json({ 
+      success: true, 
+      data: subjects.map(s => ({
+        id: s.subject,
+        name: s.subject,
+        questionCount: s.count
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// A4: /api/payment/plans
+app.get('/api/payment/plans', (req, res) => {
+  res.json({
+    success: true,
+    data: [
+      {
+        id: 'monthly',
+        name: '月訂閱',
+        price: 299,
+        currency: 'TWD',
+        period: '月',
+        features: ['無限題目練習', '詳細解析', '錯題本', '學習報告']
+      },
+      {
+        id: 'yearly',
+        name: '年訂閱',
+        price: 2388,
+        originalPrice: 3588,
+        currency: 'TWD',
+        period: '年',
+        discount: '33% OFF',
+        features: ['無限題目練習', '詳細解析', '錯題本', '學習報告', 'AI 個人化推薦', '優先客服']
+      },
+      {
+        id: 'lifetime',
+        name: '終身會員',
+        price: 4999,
+        currency: 'TWD',
+        period: '永久',
+        features: ['所有功能永久使用', '未來新功能免費', 'VIP 專屬群組']
+      }
+    ]
+  });
+});
+
+// A5: /api/leaderboard
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const { type = 'xp', limit = 20 } = req.query;
+    
+    // 嘗試從 local_users 取排行
+    const users = await new Promise((resolve, reject) => {
+      getRuntimeDb().all(
+        `SELECT id, username, xp, level, streak FROM local_users ORDER BY ${type === 'streak' ? 'streak' : 'xp'} DESC LIMIT ?`,
+        [parseInt(limit)],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        }
+      );
+    });
+    
+    // 如果沒有用戶，返回模擬數據
+    if (users.length === 0) {
+      const mockData = [
+        { rank: 1, username: '學霸小明', xp: 15420, level: 28, streak: 45 },
+        { rank: 2, username: '努力的阿華', xp: 12350, level: 24, streak: 32 },
+        { rank: 3, username: '數學天才', xp: 11200, level: 22, streak: 28 },
+        { rank: 4, username: '科學家', xp: 9800, level: 20, streak: 21 },
+        { rank: 5, username: '未來之星', xp: 8500, level: 18, streak: 18 }
+      ];
+      return res.json({ success: true, data: mockData, mock: true });
+    }
+    
+    res.json({
+      success: true,
+      data: users.map((u, i) => ({
+        rank: i + 1,
+        userId: u.id,
+        username: u.username,
+        xp: u.xp,
+        level: u.level,
+        streak: u.streak
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// A6: /api/progress
+app.get('/api/progress', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    let userId = null;
+    
+    if (token) {
+      try {
+        const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
+        userId = decoded.userId;
+      } catch (e) {}
+    }
+    
+    if (!userId) {
+      // 未登入返回空進度
+      return res.json({
+        success: true,
+        data: {
+          totalQuestions: 0,
+          correctAnswers: 0,
+          accuracy: 0,
+          xpEarned: 0,
+          subjects: []
+        }
+      });
+    }
+    
+    const progress = await new Promise((resolve, reject) => {
+      getRuntimeDb().all(
+        `SELECT subject, SUM(correct) as correct, SUM(total) as total, SUM(xp_earned) as xp 
+         FROM local_progress WHERE user_id = ? GROUP BY subject`,
+        [userId],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        }
+      );
+    });
+    
+    const totalCorrect = progress.reduce((sum, p) => sum + (p.correct || 0), 0);
+    const totalQuestions = progress.reduce((sum, p) => sum + (p.total || 0), 0);
+    const totalXp = progress.reduce((sum, p) => sum + (p.xp || 0), 0);
+    
+    res.json({
+      success: true,
+      data: {
+        totalQuestions,
+        correctAnswers: totalCorrect,
+        accuracy: totalQuestions > 0 ? Math.round(totalCorrect / totalQuestions * 100) : 0,
+        xpEarned: totalXp,
+        subjects: progress.map(p => ({
+          subject: p.subject,
+          correct: p.correct,
+          total: p.total,
+          accuracy: p.total > 0 ? Math.round(p.correct / p.total * 100) : 0
+        }))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/progress (記錄答題)
+app.post('/api/progress', async (req, res) => {
+  try {
+    const { subject, correct, questionId, userAnswer, correctAnswer } = req.body;
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    let userId = 0;
+    
+    if (token) {
+      try {
+        const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
+        userId = decoded.userId;
+      } catch (e) {}
+    }
+    
+    // 更新進度
+    await new Promise((resolve, reject) => {
+      getRuntimeDb().run(
+        `INSERT INTO local_progress (user_id, subject, correct, total, xp_earned, updated_at)
+         VALUES (?, ?, ?, 1, ?, ?)
+         ON CONFLICT DO UPDATE SET 
+           correct = correct + ?,
+           total = total + 1,
+           xp_earned = xp_earned + ?,
+           updated_at = ?`,
+        [userId, subject, correct ? 1 : 0, correct ? 10 : 2, new Date().toISOString(),
+         correct ? 1 : 0, correct ? 10 : 2, new Date().toISOString()],
+        (err) => {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
+    });
+    
+    // 記錄錯題
+    if (!correct && questionId) {
+      getRuntimeDb().run(
+        `INSERT INTO local_wrong_answers (user_id, question_id, subject, user_answer, correct_answer) VALUES (?, ?, ?, ?, ?)`,
+        [userId, questionId, subject, userAnswer, correctAnswer]
+      );
+    }
+    
+    res.json({ success: true, message: '已記錄' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// /api/achievements
+app.get('/api/achievements', async (req, res) => {
+  try {
+    const achievements = [
+      { id: 1, name: '初學者', description: '完成第一題', icon: '🌱', unlocked: true },
+      { id: 2, name: '連續三天', description: '連續登入3天', icon: '🔥', unlocked: false },
+      { id: 3, name: '百題達人', description: '累計答對100題', icon: '💯', unlocked: false },
+      { id: 4, name: '科目專家', description: '單科正確率達90%', icon: '🎯', unlocked: false },
+      { id: 5, name: '全科學霸', description: '所有科目都練習過', icon: '📚', unlocked: false },
+      { id: 6, name: '挑戰者', description: '完成一次模擬考', icon: '🏆', unlocked: false }
+    ];
+    
+    res.json({ success: true, data: achievements });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+console.log('✅ API v3 路由已載入 (SQLite 備用認證)');
