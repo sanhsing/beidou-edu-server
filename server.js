@@ -1,5 +1,5 @@
 /**
- * 北斗教育 API Server v7.8.1
+ * 北斗教育 API Server v7.8.2
  * 混合式架構：SQLite (題庫) + MongoDB (用戶)
  * 
  * 北斗七星文創數位有限公司 © 2025
@@ -654,12 +654,12 @@ app.get('/api/cert/exams', async (req, res) => {
 app.get('/api/cert/:certId/questions', async (req, res) => {
   try {
     const { certId } = req.params;
-    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     
     let questions = [];
     
     // 根據 certId 選擇不同的表
-    if (certId === 'ipas_security' || certId.startsWith('IPAS')) {
+    if (certId === 'ipas_security' || certId === 'ipas' || certId.startsWith('IPAS')) {
       // iPAS 資訊安全
       questions = await dbAll(`
         SELECT 
@@ -669,19 +669,27 @@ app.get('/api/cert/:certId/questions', async (req, res) => {
         ORDER BY RANDOM() LIMIT ?
       `, [limit]);
     } else {
-      // AI 認證 (google_ai, aws_cloud 等)
+      // AI 認證 (google, aws, azure 等)
       const certMap = {
+        'google': 'CERT001',
         'google_ai': 'CERT001',
+        'aws': 'CERT002',
         'aws_cloud': 'CERT002', 
-        'microsoft_ai': 'CERT003'
+        'azure': 'CERT003',
+        'azure_ai': 'CERT003',
+        'microsoft_ai': 'CERT003',
+        'CERT001': 'CERT001',
+        'CERT002': 'CERT002',
+        'CERT003': 'CERT003'
       };
       const mappedId = certMap[certId] || certId;
       
+      // 使用新表 ai_cert_questions_v2
       questions = await dbAll(`
         SELECT 
           question_id, domain_id, question_text,
-          options, answer, explanation, difficulty
-        FROM ai_cert_questions 
+          options, answer, explanation, difficulty, xtf_analysis
+        FROM ai_cert_questions_v2 
         WHERE cert_id = ?
         ORDER BY RANDOM() LIMIT ?
       `, [mappedId, limit]);
@@ -693,6 +701,10 @@ app.get('/api/cert/:certId/questions', async (req, res) => {
       try {
         opts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
       } catch(e) { opts = []; }
+      let xtf = null;
+      try {
+        xtf = q.xtf_analysis ? JSON.parse(q.xtf_analysis) : null;
+      } catch(e) { xtf = null; }
       return {
         id: q.question_id,
         category: q.domain_id,
@@ -700,7 +712,8 @@ app.get('/api/cert/:certId/questions', async (req, res) => {
         options: Array.isArray(opts) ? opts : [],
         answer: q.answer,
         explanation: q.explanation,
-        difficulty: q.difficulty
+        difficulty: q.difficulty,
+        xtf: xtf
       };
     });
     
@@ -1337,7 +1350,7 @@ async function startServer() {
   // 啟動
   app.listen(PORT, () => {
     console.log('================================================');
-    console.log(`🚀 北斗教育 API Server v7.8.1`);
+    console.log(`🚀 北斗教育 API Server v7.8.2`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`📊 SQLite: ${DB_PATH}`);
     console.log(`📦 MongoDB: ${getConnectionStatus().connected ? '已連線' : '未連線'}`);

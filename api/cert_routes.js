@@ -16,18 +16,22 @@ const router = express.Router();
 
 const CERT_ID_MAP = {
   // API 使用 → DB 實際值
+  'google': 'CERT001',        // 前端簡寫
   'google_ai': 'CERT001',
   'google-ai': 'CERT001',
   'CERT001': 'CERT001',
+  'aws': 'CERT002',           // 前端簡寫
   'aws_cloud': 'CERT002', 
   'aws-ai': 'CERT002',
   'CERT002': 'CERT002',
+  'azure': 'CERT003',         // 前端簡寫
   'azure_ai': 'CERT003',
   'azure-ai': 'CERT003',
   'CERT003': 'CERT003',
-  'AI-900': 'AI-900',
+  'AI-900': 'CERT003',        // Azure AI-900 對應
   'AZ-900': 'AZ-900',
   'DP-900': 'DP-900',
+  'ipas': 'IPAS_ISE_BASIC',   // 前端簡寫
   'ipas_security': 'IPAS_ISE_BASIC',
   'IPAS_ISE_BASIC': 'IPAS_ISE_BASIC',
   'IPAS_ISE_INTER': 'IPAS_ISE_INTER'
@@ -98,6 +102,73 @@ function shuffleArray(arr) {
   }
   return a;
 }
+
+// ============================================================
+// 前端格式路由 (必須在 /questions/:certId 之前)
+// GET /api/cert/google/questions, /api/cert/aws/questions, etc.
+// ============================================================
+
+router.get('/:certId/questions', async (req, res) => {
+  try {
+    const { certId: rawCertId } = req.params;
+    const certId = mapCertId(rawCertId);
+    const { domain, limit = 50, random = 'true' } = req.query;
+    const maxLimit = Math.min(parseInt(limit) || 50, 1000);
+    
+    console.log(`[cert API] /${rawCertId}/questions -> ${certId}`);
+    
+    let questions = [];
+    
+    if (certId.startsWith('IPAS')) {
+      let sql = 'SELECT * FROM ipas_ise_questions WHERE cert_id = ?';
+      const params = [certId];
+      if (domain) { sql += ' AND domain_id LIKE ?'; params.push(`${domain}%`); }
+      if (random === 'true') sql += ' ORDER BY RANDOM()';
+      sql += ' LIMIT ?';
+      params.push(maxLimit);
+      
+      const rows = await dbAll(sql, params);
+      questions = rows.map(r => ({
+        id: r.question_id || r.id,
+        category: r.domain_id,
+        question: r.question_text,
+        options: parseJSON(r.options),
+        answer: r.answer,
+        explanation: r.explanation,
+        difficulty: r.difficulty
+      }));
+    } else {
+      let sql = 'SELECT * FROM ai_cert_questions_v2 WHERE cert_id = ?';
+      const params = [certId];
+      if (domain) { sql += ' AND domain_id LIKE ?'; params.push(`${domain}%`); }
+      if (random === 'true') sql += ' ORDER BY RANDOM()';
+      sql += ' LIMIT ?';
+      params.push(maxLimit);
+      
+      const rows = await dbAll(sql, params);
+      questions = rows.map(r => ({
+        id: r.question_id || r.id,
+        category: r.domain_id,
+        question: r.question_text,
+        options: parseJSON(r.options),
+        answer: r.answer,
+        explanation: r.explanation,
+        difficulty: r.difficulty,
+        xtf: parseJSON(r.xtf_analysis)
+      }));
+    }
+    
+    res.json({
+      success: true,
+      data: questions,
+      count: questions.length,
+      cert_id: certId
+    });
+  } catch (err) {
+    console.error('[cert API] Error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // ============================================================
 // 證照考試配置

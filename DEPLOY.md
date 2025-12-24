@@ -1,179 +1,125 @@
-# 北斗教育 - Render 部署指南
+# 北斗教育前端部署指南
 
-## 一、環境變數設定
+## GitHub Pages 部署步驟
 
-在 Render Dashboard > Environment 中設定：
-
-### 必要變數
+### 1. 建立 Repository
 
 ```bash
-# 伺服器
-NODE_ENV=production
-PORT=10000
-
-# MongoDB Atlas
-MONGODB_URI=mongodb+srv://sanhsing_db_user:你的密碼@beidou.5hfssts.mongodb.net/beidou?retryWrites=true&w=majority
-
-# JWT
-JWT_SECRET=生成一個強密碼，例如: openssl rand -hex 32
-
-# SQLite (題庫路徑)
-EDUCATION_DB_PATH=/opt/render/project/src/education.db
+# 在 GitHub 建立新 repo: beidou-edu-frontend
+# 或使用現有 repo
 ```
 
-### ECPay 金流（正式環境）
+### 2. 上傳前端檔案
 
 ```bash
-# 綠界正式環境
-ECPAY_MERCHANT_ID=你的商店ID
-ECPAY_HASH_KEY=你的HashKey
-ECPAY_HASH_IV=你的HashIV
-
-# 回調網址
-ECPAY_RETURN_URL=https://你的網域/payment-result
-ECPAY_NOTIFY_URL=https://你的網域/api/payment/callback
+cd frontend
+git init
+git add .
+git commit -m "v12.12 - 18 pages complete"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/beidou-edu-frontend.git
+git push -u origin main
 ```
 
-### 可選變數
+### 3. 啟用 GitHub Pages
 
-```bash
-# Telegram 通知
-TELEGRAM_BOT_TOKEN=你的Bot Token
-TELEGRAM_CHAT_ID=你的Chat ID
+1. 進入 Repository → Settings → Pages
+2. Source: Deploy from a branch
+3. Branch: main / root
+4. Save
 
-# CORS 來源
-CORS_ORIGIN=https://你的前端網域
-```
+### 4. 自訂網域（可選）
+
+1. 在 DNS 加入 CNAME 記錄指向 `YOUR_USERNAME.github.io`
+2. 在 Settings → Pages → Custom domain 填入網域
+3. 勾選 Enforce HTTPS
 
 ---
 
-## 二、部署步驟
+## 環境變數設定
 
-### 1. 準備 SQLite 資料庫
+前端不需要 .env，API 位址已硬編碼在各頁面：
 
-```bash
-# 方法 A: 使用 deploy_db.ps1 (Windows)
-.\deploy_db.ps1
-
-# 方法 B: 手動上傳
-# 將 education.db 上傳到 Render 的 /opt/render/project/src/
+```javascript
+const API_BASE = 'https://beidou-edu-server-1.onrender.com';
 ```
 
-### 2. 連接 GitHub
-
-1. Render Dashboard > New > Web Service
-2. 連接你的 GitHub Repo
-3. 設定 Build & Deploy：
-   - Build Command: `npm install`
-   - Start Command: `node server.js`
-
-### 3. 設定環境變數
-
-在 Environment 頁面加入上述所有變數
-
-### 4. 部署
-
-點擊 Deploy 即可
-
----
-
-## 三、健康檢查
-
-部署後訪問以下端點確認狀態：
-
+如需修改，可批次替換：
 ```bash
-# 健康檢查
-GET /health
+# Mac/Linux
+find . -name "*.html" -exec sed -i 's/OLD_URL/NEW_URL/g' {} \;
 
-# API 資訊
-GET /api
-
-# 統計
-GET /api/stats
-
-# 金流環境
-GET /api/payment/env
-```
-
----
-
-## 四、常見問題
-
-### Q1: SQLite 資料庫找不到
-
-**解決**：確認 `EDUCATION_DB_PATH` 環境變數指向正確路徑
-
-### Q2: ECPay 沙箱 vs 正式環境
-
-**判斷**：`NODE_ENV=production` 時使用正式環境
-**確認**：呼叫 `/api/payment/env` 查看
-
-### Q3: MongoDB 連線失敗
-
-**檢查**：
-1. `MONGODB_URI` 格式正確
-2. MongoDB Atlas 白名單加入 `0.0.0.0/0`
-3. 密碼無特殊字元（或 URL encode）
-
-### Q4: CORS 錯誤
-
-**解決**：設定 `CORS_ORIGIN` 環境變數為前端網域
-
----
-
-## 五、監控
-
-### Render 內建
-
-- Logs：即時日誌
-- Metrics：CPU/Memory/Bandwidth
-
-### 自訂監控
-
-```bash
-# 伺服器狀態
-GET /health
-
-# 回應範例
-{
-  "status": "ok",
-  "timestamp": "2025-12-17T12:00:00Z",
-  "uptime": 3600,
-  "memory": { "used": 128, "total": 512 },
-  "database": { "sqlite": "connected", "mongodb": "connected" }
+# Windows PowerShell
+Get-ChildItem -Recurse -Filter "*.html" | ForEach-Object {
+    (Get-Content $_.FullName) -replace 'OLD_URL', 'NEW_URL' | Set-Content $_.FullName
 }
 ```
 
 ---
 
-## 六、更新部署
+## 檔案清單
 
-### 自動部署
-
-連接 GitHub 後，push 到 main branch 自動觸發部署
-
-### 手動部署
-
-Render Dashboard > Manual Deploy > Deploy latest commit
-
----
-
-## 七、資料庫遷移
-
-### 更新 SQLite
-
-```bash
-# 本地打包
-zip education_v12.12.zip education.db
-
-# 上傳到 Render (使用 Render Shell)
-# 或使用 deploy_db.ps1 腳本
+```
+frontend/
+├── index.html          # Landing Page
+├── auth.html           # 登入/註冊
+├── dashboard.html      # 儀表板
+├── quiz_ui.html        # 測驗介面
+├── wrong_book.html     # 錯題本
+├── report.html         # 學習報告
+├── achievements.html   # 成就徽章
+├── leaderboard.html    # 排行榜
+├── cert_exam.html      # 證照模擬考
+├── xtf_starmap.html    # 知識星圖
+├── xtf_flashcard.html  # XTF 字卡
+├── learning_path.html  # 學習路徑
+├── class.html          # 班級管理
+├── class_students.html # 學生名單
+├── courses.html        # AI 認證課程
+├── course_learn.html   # 課程學習
+├── payment_test.html   # 金流測試
+├── manifest.json       # PWA 設定
+├── sw.js              # Service Worker
+└── icons/             # PWA 圖示
 ```
 
-### MongoDB 無需遷移
+---
 
-Schema 會自動同步
+## PWA 設定
+
+manifest.json 已設定：
+- App 名稱：北斗教育
+- 主題色：#1e1b4b
+- 背景色：#111827
+- 圖示：72-512px 全套
 
 ---
 
-*最後更新: 2025-12-17*
+## 驗證部署
+
+部署後檢查：
+
+1. ✅ 首頁載入正常
+2. ✅ 登入/註冊功能
+3. ✅ API 連線（測驗取題）
+4. ✅ PWA 安裝提示
+5. ✅ 響應式設計
+
+---
+
+## 常見問題
+
+### Q: 頁面 404
+A: 確認 GitHub Pages 已啟用，Branch 設定正確
+
+### Q: API 連線失敗
+A: 檢查 Render 後端是否運行，CORS 設定是否包含 GitHub Pages 網域
+
+### Q: PWA 無法安裝
+A: 需 HTTPS，GitHub Pages 預設支援
+
+---
+
+**部署完成後的網址格式：**
+- GitHub Pages: `https://YOUR_USERNAME.github.io/beidou-edu-frontend/`
+- 自訂網域: `https://edu.beidou.com/`
