@@ -9,7 +9,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 // DB 連線
-const DB_PATH = process.env.EDU_DB_PATH || './education.db';
+const DB_PATH = process.env.DB_PATH || './education.db';
 let db = null;
 
 function getDb() {

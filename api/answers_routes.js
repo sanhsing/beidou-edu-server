@@ -6,7 +6,7 @@ const express = require('express');
 const router = express.Router();
 const sqlite3 = require('sqlite3').verbose();
 
-const DB_PATH = process.env.EDU_DB_PATH || './education.db';
+const DB_PATH = process.env.DB_PATH || './education.db';
 let db = null;
 
 function getDb() {

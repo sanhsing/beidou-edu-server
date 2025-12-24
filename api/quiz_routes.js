@@ -14,7 +14,7 @@ const router = express.Router();
 // 資料庫連接
 // ============================================================
 
-const DB_PATH = process.env.EDUCATION_DB_PATH || path.join(__dirname, '../education.db');
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../education.db');
 let db = null;
 
 function getDB() {
