@@ -1,0 +1,148 @@
+{
+  "version": "1.0",
+  "author": "文科線織明",
+  "task": "L11",
+  "templates": {
+    "concept_confusion": {
+      "pattern": "概念混淆",
+      "analysis": "您可能混淆了 {concept_a} 和 {concept_b} 的概念",
+      "suggestion": "建議重新理解這兩個概念的核心差異：{concept_a} 強調 {key_a}，而 {concept_b} 則著重於 {key_b}",
+      "study_tips": [
+        "回顧基礎定義",
+        "製作對比表格",
+        "尋找實際案例"
+      ]
+    },
+    "incomplete_understanding": {
+      "pattern": "理解不完整",
+      "analysis": "您對 {concept} 的理解可能不夠全面",
+      "suggestion": "這個概念包含多個面向：{aspects}。建議逐一理解每個面向",
+      "study_tips": [
+        "閱讀完整文檔",
+        "動手實作",
+        "尋找延伸資源"
+      ]
+    },
+    "application_error": {
+      "pattern": "應用錯誤",
+      "analysis": "您理解了概念但在應用場景判斷上出現偏差",
+      "suggestion": "在 {scenario} 場景下，應該使用 {correct_solution} 而非 {wrong_solution}，因為 {reason}",
+      "study_tips": [
+        "多做情境題",
+        "分析案例",
+        "建立決策樹"
+      ]
+    },
+    "detail_oversight": {
+      "pattern": "細節疏忽",
+      "analysis": "答案接近正確，但忽略了關鍵細節：{detail}",
+      "suggestion": "請特別注意 {key_point}，這在實務中經常是關鍵區分點",
+      "study_tips": [
+        "標記易錯點",
+        "重複練習",
+        "做筆記"
+      ]
+    },
+    "calculation_mistake": {
+      "pattern": "計算錯誤",
+      "analysis": "計算過程中出現錯誤",
+      "suggestion": "正確的計算步驟是：{steps}",
+      "study_tips": [
+        "驗算",
+        "分步計算",
+        "使用工具輔助"
+      ]
+    }
+  },
+  "domain_specific": {
+    "ai_ml": {
+      "common_confusions": [
+        {
+          "a": "監督式學習",
+          "b": "非監督式學習",
+          "key": "是否有標記數據"
+        },
+        {
+          "a": "過擬合",
+          "b": "欠擬合",
+          "key": "模型複雜度與泛化能力"
+        },
+        {
+          "a": "精確率",
+          "b": "召回率",
+          "key": "關注的錯誤類型"
+        },
+        {
+          "a": "批次大小",
+          "b": "學習率",
+          "key": "影響訓練的方式"
+        },
+        {
+          "a": "CNN",
+          "b": "RNN",
+          "key": "處理的數據類型"
+        }
+      ]
+    },
+    "cloud_services": {
+      "common_confusions": [
+        {
+          "a": "IaaS",
+          "b": "PaaS",
+          "key": "管理責任範圍"
+        },
+        {
+          "a": "水平擴展",
+          "b": "垂直擴展",
+          "key": "擴展方向"
+        },
+        {
+          "a": "Region",
+          "b": "AZ",
+          "key": "地理範圍"
+        },
+        {
+          "a": "S3",
+          "b": "EBS",
+          "key": "存儲類型與用途"
+        }
+      ]
+    },
+    "security": {
+      "common_confusions": [
+        {
+          "a": "認證",
+          "b": "授權",
+          "key": "驗證身分 vs 給予權限"
+        },
+        {
+          "a": "加密",
+          "b": "雜湊",
+          "key": "可逆性"
+        },
+        {
+          "a": "IDS",
+          "b": "IPS",
+          "key": "偵測 vs 防禦"
+        },
+        {
+          "a": "對稱加密",
+          "b": "非對稱加密",
+          "key": "金鑰數量"
+        },
+        {
+          "a": "風險",
+          "b": "威脅",
+          "key": "可能性 vs 來源"
+        }
+      ]
+    }
+  },
+  "encouragement_messages": [
+    "錯誤是學習的機會，每次錯誤都讓你更接近精通！",
+    "理解錯誤原因比答對更重要，你正在深度學習！",
+    "這個概念很多人都會混淆，你不是唯一的！",
+    "堅持下去，熟能生巧！",
+    "分析錯誤是成長的關鍵步驟！"
+  ]
+}

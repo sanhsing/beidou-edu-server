@@ -1,0 +1,114 @@
+{
+  "version": "1.0",
+  "author": "文科線織明",
+  "task": "L15",
+  "stage_guidance": {
+    "discovery": {
+      "name": "探索階段",
+      "description": "初次接觸新概念",
+      "activities": [
+        "閱讀概念說明",
+        "觀看入門影片",
+        "瀏覽術語表"
+      ],
+      "mindset": "保持好奇心，不求完全理解，先建立大致印象",
+      "duration": "10-15分鐘/概念"
+    },
+    "understanding": {
+      "name": "理解階段",
+      "description": "深入理解概念",
+      "activities": [
+        "閱讀詳細文檔",
+        "做筆記",
+        "嘗試用自己的話解釋"
+      ],
+      "mindset": "追根究底，問「為什麼」，連結已知知識",
+      "duration": "20-30分鐘/概念"
+    },
+    "practice": {
+      "name": "練習階段",
+      "description": "透過練習鞏固",
+      "activities": [
+        "做練習題",
+        "分析錯題",
+        "複習弱點"
+      ],
+      "mindset": "錯誤是學習的一部分，重質不重量",
+      "duration": "30-45分鐘/次"
+    },
+    "mastery": {
+      "name": "精通階段",
+      "description": "達到考試水準",
+      "activities": [
+        "做模擬考",
+        "限時練習",
+        "教導他人"
+      ],
+      "mindset": "追求準確和速度的平衡，建立自信",
+      "duration": "60-90分鐘/次"
+    }
+  },
+  "difficulty_guidance": {
+    "1": {
+      "label": "入門",
+      "approach": "從定義開始，理解基本概念",
+      "common_mistakes": "跳過基礎，急於求成",
+      "tips": "花時間打好基礎，會讓後續學習更順利"
+    },
+    "2": {
+      "label": "基礎",
+      "approach": "建立概念之間的連結",
+      "common_mistakes": "死記硬背，不理解原理",
+      "tips": "嘗試畫出概念圖，幫助記憶"
+    },
+    "3": {
+      "label": "中級",
+      "approach": "學習應用場景和最佳實踐",
+      "common_mistakes": "只看不做，缺乏實作",
+      "tips": "動手操作或思考實際案例"
+    },
+    "4": {
+      "label": "進階",
+      "approach": "處理複雜情境和邊界案例",
+      "common_mistakes": "忽略細節和例外情況",
+      "tips": "注意題目的關鍵字和限制條件"
+    },
+    "5": {
+      "label": "專家",
+      "approach": "綜合多個概念解決問題",
+      "common_mistakes": "過度思考或遺漏簡單解法",
+      "tips": "先分析問題，再選擇最佳方案"
+    }
+  },
+  "daily_routines": {
+    "study_15min": {
+      "name": "15分鐘速學",
+      "suitable_for": "忙碌的日子",
+      "activities": [
+        "複習 5 個術語 (5分鐘)",
+        "做 5 題練習 (8分鐘)",
+        "記錄今日收穫 (2分鐘)"
+      ]
+    },
+    "study_30min": {
+      "name": "30分鐘標準學習",
+      "suitable_for": "日常練習",
+      "activities": [
+        "複習昨日內容 (5分鐘)",
+        "學習新概念 (10分鐘)",
+        "做 10 題練習 (12分鐘)",
+        "回顧錯題 (3分鐘)"
+      ]
+    },
+    "study_60min": {
+      "name": "60分鐘深度學習",
+      "suitable_for": "週末或有空時",
+      "activities": [
+        "複習本週內容 (10分鐘)",
+        "深入學習一個主題 (20分鐘)",
+        "做 20 題練習 (25分鐘)",
+        "總結與規劃 (5分鐘)"
+      ]
+    }
+  }
+}

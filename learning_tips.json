@@ -1,0 +1,152 @@
+{
+  "version": "1.0",
+  "author": "文科線織明",
+  "task": "L13",
+  "readiness_tips": {
+    "NOT_STARTED": {
+      "message": "歡迎開始學習！",
+      "tips": [
+        "先瀏覽考試大綱，了解考試範圍",
+        "制定學習計畫，每天固定時間學習",
+        "從基礎概念開始，不要跳過",
+        "準備筆記本記錄重點"
+      ],
+      "estimated_days": 30,
+      "daily_hours": 1.5
+    },
+    "EARLY_STAGE": {
+      "message": "學習正在起步，保持節奏！",
+      "tips": [
+        "專注於理解核心概念",
+        "每學完一個章節就做練習題",
+        "標記不懂的地方，稍後回顧",
+        "嘗試用自己的話解釋概念"
+      ],
+      "estimated_days": 21,
+      "daily_hours": 2
+    },
+    "IN_PROGRESS": {
+      "message": "進展順利，繼續加油！",
+      "tips": [
+        "開始做完整的練習測試",
+        "重點複習錯題和弱點領域",
+        "嘗試實作練習加深理解",
+        "與他人討論交流"
+      ],
+      "estimated_days": 14,
+      "daily_hours": 2
+    },
+    "ALMOST_READY": {
+      "message": "準備得差不多了，最後衝刺！",
+      "tips": [
+        "做完整的模擬考，模擬真實考試環境",
+        "重點複習易錯題",
+        "確保所有知識點都有覆蓋",
+        "保持良好的作息，不要熬夜"
+      ],
+      "estimated_days": 7,
+      "daily_hours": 2.5
+    },
+    "READY": {
+      "message": "準備充分，可以應考！",
+      "tips": [
+        "考前輕鬆複習，不要學新內容",
+        "檢查考試所需證件和設備",
+        "保持信心，相信自己的準備",
+        "提前熟悉考試流程"
+      ],
+      "estimated_days": 3,
+      "daily_hours": 1
+    }
+  },
+  "domain_tips": {
+    "ai_fundamentals": {
+      "name": "AI 基礎",
+      "key_concepts": [
+        "機器學習類型",
+        "模型評估指標",
+        "數據處理流程"
+      ],
+      "study_approach": "從概念定義開始，理解各技術的應用場景",
+      "common_mistakes": [
+        "混淆監督/非監督學習",
+        "忽略數據品質重要性"
+      ],
+      "resources": [
+        "官方文檔",
+        "線上課程",
+        "實作練習"
+      ]
+    },
+    "cloud_services": {
+      "name": "雲端服務",
+      "key_concepts": [
+        "服務類型區分",
+        "架構最佳實踐",
+        "成本優化"
+      ],
+      "study_approach": "動手實作是最好的學習方式，善用免費試用",
+      "common_mistakes": [
+        "服務選擇不當",
+        "忽略安全性"
+      ],
+      "resources": [
+        "官方文檔",
+        "實驗室練習",
+        "架構範例"
+      ]
+    },
+    "security": {
+      "name": "資訊安全",
+      "key_concepts": [
+        "CIA 三要素",
+        "攻擊類型",
+        "防護措施",
+        "法規合規"
+      ],
+      "study_approach": "理解威脅與防護的對應關係，關注最新資安事件",
+      "common_mistakes": [
+        "忽略人為因素",
+        "過度依賴單一防護"
+      ],
+      "resources": [
+        "NIST 框架",
+        "OWASP 指南",
+        "資安新聞"
+      ]
+    }
+  },
+  "motivation_messages": [
+    "每天進步一點點，累積起來就是巨大的成長！",
+    "學習是投資自己最好的方式！",
+    "專業認證是你能力的最佳證明！",
+    "堅持下去，成功就在不遠處！",
+    "相信自己，你比想像的更強大！",
+    "每一次練習都在為成功鋪路！",
+    "今天的努力，是明天的實力！"
+  ],
+  "time_management": {
+    "pomodoro": {
+      "name": "番茄工作法",
+      "description": "25分鐘專注學習 + 5分鐘休息",
+      "best_for": "需要高度專注的理論學習"
+    },
+    "spaced_repetition": {
+      "name": "間隔重複",
+      "description": "依照記憶曲線安排複習時間",
+      "intervals": [
+        "1天後",
+        "3天後",
+        "7天後",
+        "14天後",
+        "30天後"
+      ],
+      "best_for": "術語和概念記憶"
+    },
+    "active_recall": {
+      "name": "主動回憶",
+      "description": "不看答案，先嘗試回憶，再核對",
+      "best_for": "鞏固已學知識"
+    }
+  }
+}

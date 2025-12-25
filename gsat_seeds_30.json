@@ -1,0 +1,499 @@
+{
+  "meta": {
+    "version": "1.0",
+    "date": "2025-12-25",
+    "total": 30,
+    "subjects": 10,
+    "seeds_per_subject": 3
+  },
+  "seeds": {
+    "PHY_momentum_01": {
+      "node_id": "PHY_momentum_01",
+      "subject": "物理",
+      "topic": "動量與衝量",
+      "principle": "動量 p = mv，衝量 I = Δp = FΔt。動量守恆：無外力時總動量不變。",
+      "context_template": "彈力球碰撞實驗：質量 {m} kg，初速 {v1} m/s，反彈速 {v2} m/s，接觸時間 {t} 秒。",
+      "formulas": ["p=m*v", "I=m*(v2+v1)", "F=I/t"],
+      "vals_schema": {
+        "m": {"range": [0.1, 0.5], "step": 0.1, "unit": "kg"},
+        "v1": {"range": [5, 15], "step": 5, "unit": "m/s"},
+        "v2": {"range": [3, 12], "step": 3, "unit": "m/s"},
+        "t": {"choices": [0.01, 0.02, 0.05], "unit": "s"}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "撞擊前動量為何？", "answer_expr": "m * v1", "unit": "kg·m/s", "trap_rules": [{"type": "wrong_formula", "expr": "0.5*m*v1**2"}], "explanation": "p = mv = {m}×{v1} = {ans}"},
+        {"level": "apply", "stem": "碰撞衝量為何？", "answer_expr": "m * (v2 + v1)", "unit": "kg·m/s", "trap_rules": [{"type": "wrong_sign", "expr": "m*(v2-v1)"}], "explanation": "I = m(v₂+v₁) = {ans}"},
+        {"level": "extend", "stem": "平均作用力為何？", "answer_expr": "m * (v2 + v1) / t", "unit": "N", "trap_rules": [], "explanation": "F = I/Δt = {ans} N"}
+      ]
+    },
+    "PHY_energy_01": {
+      "node_id": "PHY_energy_01",
+      "subject": "物理",
+      "topic": "力學能守恆",
+      "principle": "力學能 = 動能 + 位能。無摩擦時力學能守恆：½mv² + mgh = 常數。",
+      "context_template": "質量 {m} kg 的物體從 {h} 公尺高處自由落下。(g = 10 m/s²)",
+      "formulas": ["KE=0.5*m*v**2", "PE=m*g*h", "v=sqrt(2*g*h)"],
+      "vals_schema": {
+        "m": {"range": [1, 5], "step": 1, "unit": "kg"},
+        "h": {"range": [5, 20], "step": 5, "unit": "m"},
+        "g": {"value": 10, "unit": "m/s²"}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "物體初始位能為何？", "answer_expr": "m * g * h", "unit": "J", "trap_rules": [], "explanation": "PE = mgh = {m}×10×{h} = {ans} J"},
+        {"level": "apply", "stem": "落地瞬間速度為何？", "answer_expr": "sqrt(2 * g * h)", "unit": "m/s", "trap_rules": [{"type": "forget_sqrt", "expr": "2*g*h"}], "explanation": "v = √(2gh) = {ans} m/s"},
+        {"level": "extend", "stem": "落地瞬間動能為何？", "answer_expr": "m * g * h", "unit": "J", "trap_rules": [], "explanation": "能量守恆：KE = PE = {ans} J"}
+      ]
+    },
+    "PHY_ohm_01": {
+      "node_id": "PHY_ohm_01",
+      "subject": "物理",
+      "topic": "電路與歐姆定律",
+      "principle": "歐姆定律 V = IR。串聯電阻 R總 = R₁+R₂，並聯電阻 1/R總 = 1/R₁+1/R₂。",
+      "context_template": "電路中電源電壓 {V} V，電阻 {R} Ω。",
+      "formulas": ["I=V/R", "P=V*I", "P=I**2*R"],
+      "vals_schema": {
+        "V": {"range": [6, 24], "step": 6, "unit": "V"},
+        "R": {"range": [2, 10], "step": 2, "unit": "Ω"}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "電路電流為何？", "answer_expr": "V / R", "unit": "A", "trap_rules": [{"type": "inverse", "expr": "R/V"}], "explanation": "I = V/R = {V}/{R} = {ans} A"},
+        {"level": "apply", "stem": "電路功率為何？", "answer_expr": "V * V / R", "unit": "W", "trap_rules": [], "explanation": "P = V²/R = {ans} W"},
+        {"level": "extend", "stem": "若電阻加倍，電流變為原來幾倍？", "answer_expr": "0.5", "unit": "", "trap_rules": [], "explanation": "I ∝ 1/R，R加倍則I減半"}
+      ]
+    },
+
+    "CHEM_mole_01": {
+      "node_id": "CHEM_mole_01",
+      "subject": "化學",
+      "topic": "莫耳與化學計量",
+      "principle": "1莫耳 = 6.02×10²³個粒子。莫耳數 = 質量/莫耳質量。",
+      "context_template": "水樣本質量 {mass} 克，水分子量 18 g/mol，亞佛加厥數 6×10²³。",
+      "formulas": ["n=mass/M", "N=n*Na"],
+      "vals_schema": {
+        "mass": {"range": [18, 90], "step": 18, "unit": "g"},
+        "M": {"value": 18, "unit": "g/mol"},
+        "Na": {"value": 6e23}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "水樣本莫耳數？", "answer_expr": "mass / M", "unit": "mol", "trap_rules": [], "explanation": "n = {mass}/18 = {ans} mol"},
+        {"level": "apply", "stem": "水分子數？", "answer_expr": "(mass/M) * Na", "unit": "個", "trap_rules": [], "explanation": "N = n × Nₐ = {ans}"},
+        {"level": "extend", "stem": "氫原子數？", "answer_expr": "(mass/M) * Na * 2", "unit": "個", "trap_rules": [], "explanation": "每水分子2個H，H數 = {ans}"}
+      ]
+    },
+    "CHEM_redox_01": {
+      "node_id": "CHEM_redox_01",
+      "subject": "化學",
+      "topic": "氧化還原",
+      "principle": "氧化：失去電子、氧化數增加。還原：得到電子、氧化數減少。",
+      "context_template": "反應：{n1} mol 的鋅與足量稀硫酸反應。Zn + H₂SO₄ → ZnSO₄ + H₂",
+      "formulas": ["mol_H2=mol_Zn", "V=mol*22.4"],
+      "vals_schema": {
+        "n1": {"range": [1, 5], "step": 1, "unit": "mol"}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "Zn 是氧化還是還原？(A)氧化 (B)還原", "answer_expr": "\"A\"", "unit": "", "trap_rules": [], "explanation": "Zn失電子被氧化"},
+        {"level": "apply", "stem": "產生H₂多少mol？", "answer_expr": "n1", "unit": "mol", "trap_rules": [], "explanation": "係數比1:1，H₂ = {ans} mol"},
+        {"level": "extend", "stem": "STP下H₂體積？", "answer_expr": "n1 * 22.4", "unit": "L", "trap_rules": [], "explanation": "V = n×22.4 = {ans} L"}
+      ]
+    },
+    "CHEM_acid_01": {
+      "node_id": "CHEM_acid_01",
+      "subject": "化學",
+      "topic": "酸鹼中和",
+      "principle": "酸鹼中和：H⁺ + OH⁻ → H₂O。中和時 n(H⁺) = n(OH⁻)。",
+      "context_template": "{v1} mL、{c1} M 的HCl與 {v2} mL、{c2} M 的NaOH混合。",
+      "formulas": ["n=M*V/1000", "neutral: n_H=n_OH"],
+      "vals_schema": {
+        "v1": {"range": [10, 50], "step": 10, "unit": "mL"},
+        "c1": {"choices": [0.1, 0.2, 0.5], "unit": "M"},
+        "v2": {"range": [10, 50], "step": 10, "unit": "mL"},
+        "c2": {"choices": [0.1, 0.2, 0.5], "unit": "M"}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "HCl的莫耳數？", "answer_expr": "c1 * v1 / 1000", "unit": "mol", "trap_rules": [], "explanation": "n = M×V = {c1}×{v1}/1000 = {ans} mol"},
+        {"level": "apply", "stem": "NaOH的莫耳數？", "answer_expr": "c2 * v2 / 1000", "unit": "mol", "trap_rules": [], "explanation": "n = {c2}×{v2}/1000 = {ans} mol"},
+        {"level": "extend", "stem": "混合後溶液酸鹼性？(A)酸性 (B)中性 (C)鹼性", "answer_expr": "\"A\" if c1*v1 > c2*v2 else (\"B\" if c1*v1 == c2*v2 else \"C\")", "unit": "", "trap_rules": [], "explanation": "比較H⁺與OH⁻莫耳數"}
+      ]
+    },
+
+    "BIO_photo_01": {
+      "node_id": "BIO_photo_01",
+      "subject": "生物",
+      "topic": "光合作用",
+      "principle": "光合作用：6CO₂+6H₂O→C₆H₁₂O₆+6O₂。光反應在類囊體，暗反應在基質。",
+      "context_template": "植物CO₂吸收速率 {co2_rate} mg/h，呼吸釋放速率 {resp_rate} mg/h。",
+      "formulas": ["net=co2_rate", "gross=net+resp"],
+      "vals_schema": {
+        "co2_rate": {"range": [10, 30], "step": 5, "unit": "mg/h"},
+        "resp_rate": {"range": [3, 8], "step": 1, "unit": "mg/h"}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "淨光合速率？", "answer_expr": "co2_rate", "unit": "mg/h", "trap_rules": [], "explanation": "淨光合 = CO₂吸收 = {ans}"},
+        {"level": "apply", "stem": "總光合速率？", "answer_expr": "co2_rate + resp_rate", "unit": "mg/h", "trap_rules": [], "explanation": "總光合 = 淨+呼吸 = {ans}"},
+        {"level": "extend", "stem": "無光時CO₂淨交換？", "answer_expr": "-resp_rate", "unit": "mg/h", "trap_rules": [], "explanation": "只有呼吸，釋放CO₂ = {ans}"}
+      ]
+    },
+    "BIO_mendel_01": {
+      "node_id": "BIO_mendel_01",
+      "subject": "生物",
+      "topic": "遺傳與孟德爾",
+      "principle": "孟德爾定律：分離律、獨立分配律。基因型Aa自交，子代比例AA:Aa:aa = 1:2:1。",
+      "context_template": "豌豆雜交實驗：親代基因型 Aa × Aa，共產生 {total} 株子代。",
+      "formulas": ["AA=total/4", "Aa=total/2", "aa=total/4"],
+      "vals_schema": {
+        "total": {"range": [100, 400], "step": 100}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "預期AA子代數？", "answer_expr": "total / 4", "unit": "株", "trap_rules": [], "explanation": "AA比例1/4，數量 = {ans}"},
+        {"level": "apply", "stem": "預期顯性表現型比例？", "answer_expr": "0.75", "unit": "", "trap_rules": [], "explanation": "AA+Aa = 3/4 = 0.75"},
+        {"level": "extend", "stem": "Aa自交後代Aa比例？(A)1/4 (B)1/2 (C)3/4 (D)1", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "Aa比例 = 2/4 = 1/2"}
+      ]
+    },
+    "BIO_mitosis_01": {
+      "node_id": "BIO_mitosis_01",
+      "subject": "生物",
+      "topic": "細胞分裂",
+      "principle": "有絲分裂：DNA複製後均分，子細胞染色體數不變。減數分裂：染色體數減半。",
+      "context_template": "某生物體細胞有 {n} 條染色體（2n={n}）。",
+      "formulas": ["gamete=n/2", "mitosis=n"],
+      "vals_schema": {
+        "n": {"choices": [8, 12, 16, 20, 24]}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "有絲分裂後子細胞染色體數？", "answer_expr": "n", "unit": "條", "trap_rules": [], "explanation": "有絲分裂染色體數不變 = {ans}"},
+        {"level": "apply", "stem": "配子染色體數？", "answer_expr": "n / 2", "unit": "條", "trap_rules": [], "explanation": "減數分裂減半 = {ans}"},
+        {"level": "extend", "stem": "有絲分裂中期DNA量是G1期幾倍？(A)1 (B)2 (C)4", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "S期複製後DNA加倍"}
+      ]
+    },
+
+    "ES_plate_01": {
+      "node_id": "ES_plate_01",
+      "subject": "地科",
+      "topic": "板塊運動",
+      "principle": "板塊邊界：張裂型、聚合型、錯動型。移動速率約1-10 cm/年。",
+      "context_template": "板塊年移動 {rate} cm，距離熱點 {dist} km。",
+      "formulas": ["time=dist*1e5/rate/1e6"],
+      "vals_schema": {
+        "rate": {"range": [5, 12], "step": 1, "unit": "cm/年"},
+        "dist": {"range": [500, 1000], "step": 100, "unit": "km"}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "年移動多少公尺？", "answer_expr": "rate / 100", "unit": "m", "trap_rules": [], "explanation": "{rate} cm = {ans} m"},
+        {"level": "apply", "stem": "形成年代(百萬年)？", "answer_expr": "dist * 100000 / rate / 1000000", "unit": "Ma", "trap_rules": [], "explanation": "time = {ans} 百萬年"},
+        {"level": "extend", "stem": "下列何者非板塊邊界？(A)張裂 (B)聚合 (C)錯動 (D)旋轉", "answer_expr": "\"D\"", "unit": "", "trap_rules": [], "explanation": "只有張裂、聚合、錯動三種"}
+      ]
+    },
+    "ES_atm_01": {
+      "node_id": "ES_atm_01",
+      "subject": "地科",
+      "topic": "大氣環流",
+      "principle": "三圈環流：哈德里胞(0-30°)、乏瑞爾胞(30-60°)、極地胞(60-90°)。",
+      "context_template": "某地位於北緯 {lat} 度，盛行風向為 {wind}。",
+      "formulas": [],
+      "vals_schema": {
+        "lat": {"choices": [15, 45, 75]},
+        "wind": {"choices": ["東北", "西南", "東北"]}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "北緯15度盛行風？(A)東北 (B)西南 (C)東南", "answer_expr": "\"A\"", "unit": "", "trap_rules": [], "explanation": "東北信風帶"},
+        {"level": "apply", "stem": "北緯45度盛行風？(A)東北 (B)西南 (C)東南", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "西風帶"},
+        {"level": "extend", "stem": "哈德里環流上升區在？(A)赤道 (B)副熱帶 (C)極地", "answer_expr": "\"A\"", "unit": "", "trap_rules": [], "explanation": "赤道低壓上升"}
+      ]
+    },
+    "ES_astro_01": {
+      "node_id": "ES_astro_01",
+      "subject": "地科",
+      "topic": "天文與日月",
+      "principle": "地球公轉週期365.25天，自轉週期24小時。月球公轉週期約27.3天(恆星月)。",
+      "context_template": "觀測時月相為{phase}，距離上次滿月約 {days} 天。",
+      "formulas": ["synodic=29.5"],
+      "vals_schema": {
+        "phase": {"choices": ["滿月", "上弦月", "下弦月", "新月"]},
+        "days": {"choices": [0, 7, 14, 22]}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "月球繞地公轉週期約？(A)24天 (B)27天 (C)30天 (D)365天", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "恆星月約27.3天"},
+        {"level": "apply", "stem": "朔望月週期約？(A)24天 (B)27天 (C)29.5天 (D)30天", "answer_expr": "\"C\"", "unit": "", "trap_rules": [], "explanation": "朔望月約29.5天"},
+        {"level": "extend", "stem": "滿月時月球位置？(A)地球與太陽間 (B)與太陽同側 (C)地球背對太陽側", "answer_expr": "\"C\"", "unit": "", "trap_rules": [], "explanation": "滿月時月球在地球背向太陽側"}
+      ]
+    },
+
+    "MATH_prob_01": {
+      "node_id": "MATH_prob_01",
+      "subject": "數學",
+      "topic": "古典機率",
+      "principle": "古典機率 P(A) = 有利數/總數。C(n,r) = n!/(r!(n-r)!)。",
+      "context_template": "袋中 {red} 紅球、{blue} 藍球，取出 {pick} 顆。",
+      "formulas": ["C(n,r)=n!/(r!*(n-r)!)"],
+      "vals_schema": {
+        "red": {"range": [3, 6], "step": 1},
+        "blue": {"range": [4, 7], "step": 1},
+        "pick": {"choices": [2, 3]}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "取法數？", "answer_expr": "C(red+blue, pick)", "unit": "種", "trap_rules": [], "explanation": "C(n,r) = {ans}"},
+        {"level": "apply", "stem": "全紅機率？", "answer_expr": "C(red,pick)/C(red+blue,pick)", "unit": "", "trap_rules": [], "explanation": "P = {ans}"},
+        {"level": "extend", "stem": "至少一紅機率？", "answer_expr": "1 - C(blue,pick)/C(red+blue,pick)", "unit": "", "trap_rules": [], "explanation": "P = 1-P(全藍) = {ans}"}
+      ]
+    },
+    "MATH_exp_01": {
+      "node_id": "MATH_exp_01",
+      "subject": "數學",
+      "topic": "指數與對數",
+      "principle": "指數律：aᵐ×aⁿ=aᵐ⁺ⁿ。對數：logₐx=y ⟺ aʸ=x。log10=1, ln e=1。",
+      "context_template": "已知 log2≈0.301, log3≈0.477。求 log{n} 的值。",
+      "formulas": ["log(a*b)=log(a)+log(b)", "log(a^n)=n*log(a)"],
+      "vals_schema": {
+        "n": {"choices": [4, 6, 8, 12]}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "log4 = ?", "answer_expr": "0.602", "unit": "", "trap_rules": [], "explanation": "log4 = 2log2 = 0.602"},
+        {"level": "apply", "stem": "log6 = ?", "answer_expr": "0.778", "unit": "", "trap_rules": [], "explanation": "log6 = log2+log3 = 0.778"},
+        {"level": "extend", "stem": "log12 = ?", "answer_expr": "1.079", "unit": "", "trap_rules": [], "explanation": "log12 = 2log2+log3 = 1.079"}
+      ]
+    },
+    "MATH_trig_01": {
+      "node_id": "MATH_trig_01",
+      "subject": "數學",
+      "topic": "三角函數",
+      "principle": "sin²θ+cos²θ=1。正弦定理：a/sinA=b/sinB=c/sinC=2R。",
+      "context_template": "三角形ABC中，角A={A}°，對邊a={a}，外接圓半徑R。",
+      "formulas": ["R=a/(2*sin(A))", "sin30=0.5", "sin60=0.866"],
+      "vals_schema": {
+        "A": {"choices": [30, 60, 90]},
+        "a": {"range": [4, 12], "step": 2}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "sin30°=?", "answer_expr": "0.5", "unit": "", "trap_rules": [], "explanation": "sin30° = 1/2 = 0.5"},
+        {"level": "apply", "stem": "sin60°=?", "answer_expr": "0.866", "unit": "", "trap_rules": [], "explanation": "sin60° = √3/2 ≈ 0.866"},
+        {"level": "extend", "stem": "若a=10,A=30°,求外接圓半徑R", "answer_expr": "10", "unit": "", "trap_rules": [], "explanation": "R = a/(2sinA) = 10/(2×0.5) = 10"}
+      ]
+    },
+
+    "CHI_rhetoric_01": {
+      "node_id": "CHI_rhetoric_01",
+      "subject": "國文",
+      "topic": "修辭與文意",
+      "principle": "常見修辭：譬喻、轉化、誇飾、排比、映襯、借代。",
+      "context_template": "「人生如戲，戲如人生」，此句運用譬喻修辭。",
+      "formulas": [],
+      "vals_schema": {},
+      "q_templates": [
+        {"level": "basic", "stem": "此句修辭？(A)譬喻 (B)排比 (C)誇飾 (D)借代", "answer_expr": "\"A\"", "unit": "", "trap_rules": [], "explanation": "以戲比喻人生，屬譬喻"},
+        {"level": "apply", "stem": "同為譬喻？(A)白髮三千丈 (B)知識就是力量 (C)門可羅雀 (D)春風又綠", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "B為譬喻，A誇飾，C借代，D轉化"},
+        {"level": "extend", "stem": "「人生如戲」的喻體？(A)人生 (B)戲 (C)如", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "喻體是用來比喻的事物"}
+      ]
+    },
+    "CHI_read_01": {
+      "node_id": "CHI_read_01",
+      "subject": "國文",
+      "topic": "閱讀理解",
+      "principle": "閱讀理解需掌握文意、主旨、作者觀點，並能推論隱含意義。",
+      "context_template": "「學而不思則罔，思而不學則殆。」—《論語》",
+      "formulas": [],
+      "vals_schema": {},
+      "q_templates": [
+        {"level": "basic", "stem": "「罔」的意思？(A)迷惘 (B)憤怒 (C)快樂 (D)驕傲", "answer_expr": "\"A\"", "unit": "", "trap_rules": [], "explanation": "罔=迷惘、沒有收穫"},
+        {"level": "apply", "stem": "本句主旨？(A)學習重要 (B)思考重要 (C)學思並重 (D)不必學習", "answer_expr": "\"C\"", "unit": "", "trap_rules": [], "explanation": "強調學與思都重要"},
+        {"level": "extend", "stem": "「殆」的意思？(A)危險 (B)快樂 (C)成功 (D)結束", "answer_expr": "\"A\"", "unit": "", "trap_rules": [], "explanation": "殆=危險、疑惑"}
+      ]
+    },
+    "CHI_word_01": {
+      "node_id": "CHI_word_01",
+      "subject": "國文",
+      "topic": "字音字形",
+      "principle": "辨別形近字、音近字，掌握常用字的正確讀音與寫法。",
+      "context_template": "下列字詞何者讀音正確？",
+      "formulas": [],
+      "vals_schema": {},
+      "q_templates": [
+        {"level": "basic", "stem": "「說」服的「說」讀音？(A)ㄕㄨㄛ (B)ㄕㄨㄟˋ (C)ㄩㄝˋ", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "說服讀ㄕㄨㄟˋ"},
+        {"level": "apply", "stem": "「曝」曬讀音？(A)ㄆㄨˋ (B)ㄅㄠˋ (C)ㄅㄛˋ", "answer_expr": "\"A\"", "unit": "", "trap_rules": [], "explanation": "曝曬讀ㄆㄨˋ"},
+        {"level": "extend", "stem": "下列何者字形正確？(A)按乃 (B)按耐 (C)按捺", "answer_expr": "\"C\"", "unit": "", "trap_rules": [], "explanation": "按捺為正確字形"}
+      ]
+    },
+
+    "ENG_tense_01": {
+      "node_id": "ENG_tense_01",
+      "subject": "英文",
+      "topic": "動詞時態",
+      "principle": "Present Perfect: have/has + p.p.，表過去到現在的持續或完成。",
+      "context_template": "Mary has lived in Taipei for {years} years.",
+      "formulas": [],
+      "vals_schema": {
+        "years": {"range": [3, 10], "step": 1}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "\"has lived\" 是什麼時態？(A)Simple Past (B)Present Perfect (C)Simple Present", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "has lived 是現在完成式"},
+        {"level": "apply", "stem": "正確句？(A)She live here since 2020 (B)She has lived here since 2020 (C)She lived here since 2020", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "since 搭配現在完成式"},
+        {"level": "extend", "stem": "By next year, she _____ here for {years} years. (A)will live (B)will have lived", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "未來完成式 will have lived"}
+      ]
+    },
+    "ENG_prep_01": {
+      "node_id": "ENG_prep_01",
+      "subject": "英文",
+      "topic": "介系詞與片語",
+      "principle": "介系詞表示時間、地點、方向等關係。常見片語需整體記憶。",
+      "context_template": "選擇正確的介系詞填空。",
+      "formulas": [],
+      "vals_schema": {},
+      "q_templates": [
+        {"level": "basic", "stem": "I arrived ___ the airport at 8 AM. (A)in (B)at (C)on", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "at 用於特定地點"},
+        {"level": "apply", "stem": "She is good ___ math. (A)in (B)at (C)on", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "be good at 擅長"},
+        {"level": "extend", "stem": "We look forward ___ seeing you. (A)to (B)for (C)at", "answer_expr": "\"A\"", "unit": "", "trap_rules": [], "explanation": "look forward to + V-ing"}
+      ]
+    },
+    "ENG_read_01": {
+      "node_id": "ENG_read_01",
+      "subject": "英文",
+      "topic": "閱讀測驗",
+      "principle": "閱讀理解需掌握主旨、細節、推論、字義猜測等技巧。",
+      "context_template": "The invention of the telephone changed communication forever. Before phones, people relied on letters.",
+      "formulas": [],
+      "vals_schema": {},
+      "q_templates": [
+        {"level": "basic", "stem": "What is the main topic? (A)Letters (B)Telephone (C)Internet", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "主題是電話的發明"},
+        {"level": "apply", "stem": "Before phones, people used ___. (A)email (B)letters (C)texting", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "文中提到 relied on letters"},
+        {"level": "extend", "stem": "\"changed...forever\" implies? (A)temporary (B)permanent (C)minor", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "forever 暗示永久性改變"}
+      ]
+    },
+
+    "HIS_dynasty_01": {
+      "node_id": "HIS_dynasty_01",
+      "subject": "歷史",
+      "topic": "中國朝代",
+      "principle": "掌握朝代順序與重大事件：秦漢魏晉南北朝隋唐宋元明清。",
+      "context_template": "唐朝建立於西元618年，開國君主為李淵。",
+      "formulas": [],
+      "vals_schema": {},
+      "q_templates": [
+        {"level": "basic", "stem": "唐朝開國君主？(A)李淵 (B)趙匡胤 (C)朱元璋 (D)劉邦", "answer_expr": "\"A\"", "unit": "", "trap_rules": [], "explanation": "唐朝由李淵建立"},
+        {"level": "apply", "stem": "唐朝完善的制度？(A)科舉 (B)九品官人法 (C)世襲 (D)推恩令", "answer_expr": "\"A\"", "unit": "", "trap_rules": [], "explanation": "科舉制度於隋唐完善"},
+        {"level": "extend", "stem": "唐朝滅亡主因？(A)外族入侵 (B)農民起義 (C)宦官專權 (D)藩鎮割據", "answer_expr": "\"D\"", "unit": "", "trap_rules": [], "explanation": "唐亡於藩鎮割據"}
+      ]
+    },
+    "HIS_taiwan_01": {
+      "node_id": "HIS_taiwan_01",
+      "subject": "歷史",
+      "topic": "台灣史",
+      "principle": "台灣歷史：史前→荷西→明鄭→清領→日治→戰後。",
+      "context_template": "1895年，清朝因《馬關條約》將台灣割讓給日本。",
+      "formulas": [],
+      "vals_schema": {},
+      "q_templates": [
+        {"level": "basic", "stem": "台灣割讓日本的條約？(A)南京條約 (B)馬關條約 (C)辛丑條約", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "1895年馬關條約"},
+        {"level": "apply", "stem": "日治時期約幾年？(A)30年 (B)40年 (C)50年 (D)60年", "answer_expr": "\"C\"", "unit": "", "trap_rules": [], "explanation": "1895-1945共50年"},
+        {"level": "extend", "stem": "明鄭時期統治者？(A)荷蘭人 (B)鄭成功 (C)清朝 (D)日本", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "1662年鄭成功驅逐荷蘭"}
+      ]
+    },
+    "HIS_world_01": {
+      "node_id": "HIS_world_01",
+      "subject": "歷史",
+      "topic": "世界史",
+      "principle": "重要事件：文藝復興、工業革命、法國大革命、兩次世界大戰。",
+      "context_template": "工業革命始於18世紀的英國，蒸汽機是關鍵發明。",
+      "formulas": [],
+      "vals_schema": {},
+      "q_templates": [
+        {"level": "basic", "stem": "工業革命始於？(A)法國 (B)英國 (C)德國 (D)美國", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "18世紀英國"},
+        {"level": "apply", "stem": "工業革命關鍵發明？(A)電腦 (B)蒸汽機 (C)電話 (D)飛機", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "蒸汽機為工業革命關鍵"},
+        {"level": "extend", "stem": "法國大革命年份？(A)1689 (B)1776 (C)1789 (D)1848", "answer_expr": "\"C\"", "unit": "", "trap_rules": [], "explanation": "1789年法國大革命"}
+      ]
+    },
+
+    "GEO_climate_01": {
+      "node_id": "GEO_climate_01",
+      "subject": "地理",
+      "topic": "氣候與地形",
+      "principle": "氣候受緯度、地形、洋流影響。緯度遞減率約每10度6°C。",
+      "context_template": "台北位於北緯{lat}度，年均溫約{temp}°C。",
+      "formulas": ["temp_diff = lat_diff * 0.6"],
+      "vals_schema": {
+        "lat": {"range": [23, 27], "step": 1},
+        "temp": {"range": [20, 24], "step": 1}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "台北氣候？(A)熱帶雨林 (B)副熱帶季風 (C)溫帶季風 (D)地中海", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "北緯25度，副熱帶季風"},
+        {"level": "apply", "stem": "影響台灣氣候主因？(A)緯度 (B)洋流 (C)地形 (D)季風", "answer_expr": "\"D\"", "unit": "", "trap_rules": [], "explanation": "東亞季風影響"},
+        {"level": "extend", "stem": "緯度每升10度，溫度降？(A)3°C (B)6°C (C)9°C (D)12°C", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "緯度遞減率約6°C/10度"}
+      ]
+    },
+    "GEO_pop_01": {
+      "node_id": "GEO_pop_01",
+      "subject": "地理",
+      "topic": "人口遷移",
+      "principle": "人口遷移有推拉因素。推力如戰爭、災害；拉力如工作、教育。",
+      "context_template": "都市化過程中，人口從鄉村遷往都市。",
+      "formulas": [],
+      "vals_schema": {},
+      "q_templates": [
+        {"level": "basic", "stem": "人口遷移的拉力？(A)戰爭 (B)就業機會 (C)天災 (D)飢荒", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "就業機會是拉力"},
+        {"level": "apply", "stem": "都市化指？(A)都市縮小 (B)鄉村人口增加 (C)都市人口比例增加", "answer_expr": "\"C\"", "unit": "", "trap_rules": [], "explanation": "都市人口比例上升"},
+        {"level": "extend", "stem": "下列何者為推力？(A)高薪 (B)良好教育 (C)政治迫害 (D)醫療資源", "answer_expr": "\"C\"", "unit": "", "trap_rules": [], "explanation": "政治迫害是推力"}
+      ]
+    },
+    "GEO_location_01": {
+      "node_id": "GEO_location_01",
+      "subject": "地理",
+      "topic": "區位理論",
+      "principle": "工業區位：原料、市場、勞力、交通。農業區位：邱念模型。",
+      "context_template": "工廠選址需考慮運輸成本與市場距離。",
+      "formulas": [],
+      "vals_schema": {},
+      "q_templates": [
+        {"level": "basic", "stem": "鋼鐵業屬於？(A)原料導向 (B)市場導向 (C)勞力導向", "answer_expr": "\"A\"", "unit": "", "trap_rules": [], "explanation": "鋼鐵業需靠近煤鐵礦"},
+        {"level": "apply", "stem": "麵包店屬於？(A)原料導向 (B)市場導向 (C)勞力導向", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "麵包易腐敗需靠近市場"},
+        {"level": "extend", "stem": "邱念農業區位核心概念？(A)土壤 (B)運輸成本 (C)氣候 (D)勞力", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "邱念模型強調運輸成本"}
+      ]
+    },
+
+    "CIV_law_01": {
+      "node_id": "CIV_law_01",
+      "subject": "公民",
+      "topic": "法律與權利",
+      "principle": "基本權利：自由權、平等權、受益權、參政權。年滿18歲有選舉權。",
+      "context_template": "依據憲法，年滿{age}歲有選舉權。",
+      "formulas": [],
+      "vals_schema": {
+        "age": {"range": [16, 22], "step": 1}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "選舉權年齡？(A)16 (B)18 (C)20 (D)23", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "2022年後18歲有選舉權"},
+        {"level": "apply", "stem": "{age}歲可投票？(A)可以 (B)不可以", "answer_expr": "\"A\" if age>=18 else \"B\"", "unit": "", "trap_rules": [], "explanation": "滿18歲可投票"},
+        {"level": "extend", "stem": "受益權包括？(A)言論自由 (B)選舉權 (C)生存權", "answer_expr": "\"C\"", "unit": "", "trap_rules": [], "explanation": "受益權含生存、工作、財產權"}
+      ]
+    },
+    "CIV_econ_01": {
+      "node_id": "CIV_econ_01",
+      "subject": "公民",
+      "topic": "經濟供需",
+      "principle": "需求法則：價格↑需求量↓。供給法則：價格↑供給量↑。均衡價格由供需決定。",
+      "context_template": "市場中某商品價格{price}元，需求量{qd}個，供給量{qs}個。",
+      "formulas": ["surplus=qs-qd", "shortage=qd-qs"],
+      "vals_schema": {
+        "price": {"range": [50, 150], "step": 25},
+        "qd": {"range": [100, 300], "step": 50},
+        "qs": {"range": [100, 300], "step": 50}
+      },
+      "q_templates": [
+        {"level": "basic", "stem": "價格上升，需求量？(A)增加 (B)減少 (C)不變", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "需求法則：價格↑需求量↓"},
+        {"level": "apply", "stem": "供過於求時價格？(A)上升 (B)下降 (C)不變", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "供過於求價格下降"},
+        {"level": "extend", "stem": "均衡價格決定因素？(A)政府 (B)供需 (C)成本 (D)利潤", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "供需決定均衡價格"}
+      ]
+    },
+    "CIV_politics_01": {
+      "node_id": "CIV_politics_01",
+      "subject": "公民",
+      "topic": "政治制度",
+      "principle": "民主制度：內閣制、總統制、雙首長制。台灣屬雙首長制。",
+      "context_template": "台灣的政府體制為雙首長制。",
+      "formulas": [],
+      "vals_schema": {},
+      "q_templates": [
+        {"level": "basic", "stem": "台灣政體？(A)內閣制 (B)總統制 (C)雙首長制", "answer_expr": "\"C\"", "unit": "", "trap_rules": [], "explanation": "台灣為雙首長制"},
+        {"level": "apply", "stem": "內閣制特徵？(A)總統實權 (B)行政立法合一 (C)總統直選", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "內閣制行政立法合一"},
+        {"level": "extend", "stem": "美國政體？(A)內閣制 (B)總統制 (C)雙首長制 (D)君主立憲", "answer_expr": "\"B\"", "unit": "", "trap_rules": [], "explanation": "美國為總統制"}
+      ]
+    }
+  }
+}

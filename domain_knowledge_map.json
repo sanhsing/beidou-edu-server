@@ -1,0 +1,403 @@
+{
+  "version": "1.0",
+  "author": "文科線織明",
+  "task": "L14",
+  "certifications": {
+    "CERT001": {
+      "name": "Google AI Essentials",
+      "domains": {
+        "G01": {
+          "name": "AI 基礎概念",
+          "core_concepts": [
+            "機器學習",
+            "深度學習",
+            "神經網路",
+            "AI應用"
+          ],
+          "prerequisites": [],
+          "leads_to": [
+            "G02",
+            "G04"
+          ],
+          "difficulty_level": 1,
+          "key_terms": [
+            "Machine Learning",
+            "Deep Learning",
+            "Neural Network",
+            "Training",
+            "Inference"
+          ]
+        },
+        "G02": {
+          "name": "生成式 AI",
+          "core_concepts": [
+            "大型語言模型",
+            "提示工程",
+            "生成式AI應用"
+          ],
+          "prerequisites": [
+            "G01"
+          ],
+          "leads_to": [
+            "G04"
+          ],
+          "difficulty_level": 2,
+          "key_terms": [
+            "LLM",
+            "Prompt Engineering",
+            "Fine-tuning",
+            "RAG",
+            "Transformer"
+          ]
+        },
+        "G03": {
+          "name": "負責任的 AI",
+          "core_concepts": [
+            "AI倫理",
+            "偏見",
+            "公平性",
+            "可解釋性"
+          ],
+          "prerequisites": [
+            "G01"
+          ],
+          "leads_to": [],
+          "difficulty_level": 2,
+          "key_terms": [
+            "Bias",
+            "Fairness",
+            "Explainability",
+            "Privacy",
+            "Responsible AI"
+          ]
+        },
+        "G04": {
+          "name": "實作應用",
+          "core_concepts": [
+            "工作流程優化",
+            "內容創作",
+            "決策支援"
+          ],
+          "prerequisites": [
+            "G01",
+            "G02"
+          ],
+          "leads_to": [],
+          "difficulty_level": 3,
+          "key_terms": [
+            "Automation",
+            "Content Generation",
+            "Decision Support"
+          ]
+        }
+      }
+    },
+    "CERT002": {
+      "name": "AWS AI Practitioner",
+      "domains": {
+        "A01": {
+          "name": "AI/ML 基礎",
+          "core_concepts": [
+            "ML概念",
+            "監督學習",
+            "非監督學習",
+            "模型評估"
+          ],
+          "prerequisites": [],
+          "leads_to": [
+            "A02",
+            "A03"
+          ],
+          "difficulty_level": 1,
+          "key_terms": [
+            "Supervised Learning",
+            "Unsupervised Learning",
+            "Model Training"
+          ]
+        },
+        "A02": {
+          "name": "生成式 AI 基礎",
+          "core_concepts": [
+            "基礎模型",
+            "Transformer",
+            "提示工程",
+            "微調"
+          ],
+          "prerequisites": [
+            "A01"
+          ],
+          "leads_to": [
+            "A03"
+          ],
+          "difficulty_level": 2,
+          "key_terms": [
+            "Foundation Model",
+            "Amazon Titan",
+            "Fine-tuning",
+            "RAG"
+          ]
+        },
+        "A03": {
+          "name": "AWS AI 服務",
+          "core_concepts": [
+            "Bedrock",
+            "SageMaker",
+            "認知服務"
+          ],
+          "prerequisites": [
+            "A01"
+          ],
+          "leads_to": [
+            "A04"
+          ],
+          "difficulty_level": 3,
+          "key_terms": [
+            "SageMaker",
+            "Bedrock",
+            "Comprehend",
+            "Rekognition",
+            "Lex"
+          ]
+        },
+        "A04": {
+          "name": "負責任 AI 與安全",
+          "core_concepts": [
+            "AWS負責任AI",
+            "安全合規",
+            "成本優化"
+          ],
+          "prerequisites": [
+            "A03"
+          ],
+          "leads_to": [],
+          "difficulty_level": 2,
+          "key_terms": [
+            "Compliance",
+            "Governance",
+            "Cost Optimization",
+            "Security"
+          ]
+        }
+      }
+    },
+    "CERT003": {
+      "name": "Microsoft AI-900",
+      "domains": {
+        "M01": {
+          "name": "AI 工作負載",
+          "core_concepts": [
+            "AI類型",
+            "ML原則",
+            "負責任AI"
+          ],
+          "prerequisites": [],
+          "leads_to": [
+            "M02",
+            "M03",
+            "M04",
+            "M05"
+          ],
+          "difficulty_level": 1,
+          "key_terms": [
+            "AI Workloads",
+            "Machine Learning",
+            "Responsible AI"
+          ]
+        },
+        "M02": {
+          "name": "電腦視覺",
+          "core_concepts": [
+            "電腦視覺概念",
+            "Azure視覺服務"
+          ],
+          "prerequisites": [
+            "M01"
+          ],
+          "leads_to": [],
+          "difficulty_level": 2,
+          "key_terms": [
+            "Computer Vision",
+            "Custom Vision",
+            "Face API",
+            "OCR"
+          ]
+        },
+        "M03": {
+          "name": "自然語言處理",
+          "core_concepts": [
+            "NLP概念",
+            "語言服務",
+            "語音服務"
+          ],
+          "prerequisites": [
+            "M01"
+          ],
+          "leads_to": [
+            "M04"
+          ],
+          "difficulty_level": 2,
+          "key_terms": [
+            "NLP",
+            "Text Analytics",
+            "Speech Service",
+            "Translator"
+          ]
+        },
+        "M04": {
+          "name": "生成式 AI",
+          "core_concepts": [
+            "生成式AI",
+            "Azure OpenAI",
+            "Copilot"
+          ],
+          "prerequisites": [
+            "M01",
+            "M03"
+          ],
+          "leads_to": [],
+          "difficulty_level": 3,
+          "key_terms": [
+            "Azure OpenAI",
+            "Copilot",
+            "GPT",
+            "DALL-E"
+          ]
+        },
+        "M05": {
+          "name": "Azure ML",
+          "core_concepts": [
+            "ML工作區",
+            "AutoML"
+          ],
+          "prerequisites": [
+            "M01"
+          ],
+          "leads_to": [],
+          "difficulty_level": 2,
+          "key_terms": [
+            "Azure ML",
+            "AutoML",
+            "Designer",
+            "Workspace"
+          ]
+        }
+      }
+    },
+    "IPAS_ISE": {
+      "name": "IPAS 資訊安全工程師",
+      "domains": {
+        "ISE_B_MGT": {
+          "name": "資安管理",
+          "core_concepts": [
+            "資安概論",
+            "風險管理",
+            "政策組織",
+            "法規合規"
+          ],
+          "prerequisites": [],
+          "leads_to": [
+            "ISE_B_TECH",
+            "ISE_I_PLAN"
+          ],
+          "difficulty_level": 1,
+          "key_terms": [
+            "ISMS",
+            "Risk Assessment",
+            "Security Policy",
+            "Compliance"
+          ]
+        },
+        "ISE_B_TECH": {
+          "name": "資安技術",
+          "core_concepts": [
+            "密碼學",
+            "網路安全",
+            "系統安全",
+            "應用安全"
+          ],
+          "prerequisites": [],
+          "leads_to": [
+            "ISE_I_DEF"
+          ],
+          "difficulty_level": 2,
+          "key_terms": [
+            "Encryption",
+            "Firewall",
+            "IDS/IPS",
+            "VPN",
+            "Authentication"
+          ]
+        },
+        "ISE_I_DEF": {
+          "name": "資安防禦",
+          "core_concepts": [
+            "安全監控",
+            "事件處理",
+            "威脅情報",
+            "數位鑑識"
+          ],
+          "prerequisites": [
+            "ISE_B_TECH"
+          ],
+          "leads_to": [],
+          "difficulty_level": 3,
+          "key_terms": [
+            "SOC",
+            "SIEM",
+            "Incident Response",
+            "Threat Intelligence"
+          ]
+        },
+        "ISE_I_PLAN": {
+          "name": "資安規劃",
+          "core_concepts": [
+            "安全架構",
+            "安全開發",
+            "雲端安全"
+          ],
+          "prerequisites": [
+            "ISE_B_MGT",
+            "ISE_B_TECH"
+          ],
+          "leads_to": [],
+          "difficulty_level": 3,
+          "key_terms": [
+            "Security Architecture",
+            "DevSecOps",
+            "Cloud Security",
+            "Zero Trust"
+          ]
+        }
+      }
+    }
+  },
+  "learning_paths": {
+    "beginner": {
+      "description": "初學者路徑",
+      "sequence": [
+        "基礎概念",
+        "核心技術",
+        "實作應用",
+        "進階主題"
+      ]
+    },
+    "exam_focused": {
+      "description": "考試導向路徑",
+      "sequence": [
+        "高頻考點",
+        "弱點強化",
+        "模擬考",
+        "錯題複習"
+      ]
+    },
+    "practical": {
+      "description": "實務導向路徑",
+      "sequence": [
+        "概念理解",
+        "動手實作",
+        "案例分析",
+        "專案練習"
+      ]
+    }
+  }
+}

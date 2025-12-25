@@ -1,0 +1,139 @@
+{
+  "version": "1.0",
+  "author": "文科線織明",
+  "task": "L19",
+  "explanation_templates": {
+    "definition": {
+      "title": "📖 定義",
+      "template": "{term} 是指 {definition}。",
+      "example_intro": "例如："
+    },
+    "key_points": {
+      "title": "🎯 要點",
+      "template": "理解 {term} 需要掌握以下要點：",
+      "point_format": "• {point}"
+    },
+    "comparison": {
+      "title": "⚖️ 比較",
+      "template": "{term_a} vs {term_b}：",
+      "row_format": "| {aspect} | {a_value} | {b_value} |"
+    },
+    "use_cases": {
+      "title": "💼 應用場景",
+      "template": "{term} 適合用於：",
+      "case_format": "✓ {case}"
+    },
+    "common_mistakes": {
+      "title": "⚠️ 常見錯誤",
+      "template": "學習 {term} 時要避免以下錯誤：",
+      "mistake_format": "✗ {mistake}"
+    },
+    "tips": {
+      "title": "💡 學習技巧",
+      "template": "掌握 {term} 的技巧：",
+      "tip_format": "→ {tip}"
+    }
+  },
+  "domain_explanations": {
+    "machine_learning": {
+      "intro": "機器學習是人工智能的核心領域，讓電腦從數據中學習規律。",
+      "key_concepts": [
+        "監督學習",
+        "非監督學習",
+        "模型訓練",
+        "過擬合",
+        "特徵工程"
+      ],
+      "analogy": "就像教小孩認識動物：給他看很多狗的照片（訓練數據），他就能認出新的狗（預測）。",
+      "learning_path": [
+        "了解基本概念",
+        "學習常見算法",
+        "實作練習",
+        "調參優化"
+      ]
+    },
+    "cloud_computing": {
+      "intro": "雲端運算讓你透過網路使用運算資源，不需自建機房。",
+      "key_concepts": [
+        "IaaS",
+        "PaaS",
+        "SaaS",
+        "彈性擴展",
+        "按需付費"
+      ],
+      "analogy": "就像租房 vs 買房：雲端是租用資源，彈性但有持續成本；自建是買斷，固定成本但需要維護。",
+      "learning_path": [
+        "理解服務模式",
+        "學習主流平台",
+        "動手實作",
+        "架構設計"
+      ]
+    },
+    "security": {
+      "intro": "資訊安全保護數位資產免受威脅，是現代企業必備能力。",
+      "key_concepts": [
+        "CIA三要素",
+        "加密",
+        "認證授權",
+        "風險管理",
+        "事件響應"
+      ],
+      "analogy": "就像保護房子：鎖門（加密）、門禁卡（認證）、監視器（監控）、保險（風險轉移）。",
+      "learning_path": [
+        "建立安全意識",
+        "學習基礎技術",
+        "了解攻擊手法",
+        "實踐防護措施"
+      ]
+    },
+    "generative_ai": {
+      "intro": "生成式AI能創造新內容，包括文字、圖片、程式碼等。",
+      "key_concepts": [
+        "大型語言模型",
+        "提示工程",
+        "微調",
+        "RAG",
+        "負責任AI"
+      ],
+      "analogy": "就像一個博學的助手：讀過海量資料，能理解你的問題並給出有用的回答。",
+      "learning_path": [
+        "了解原理",
+        "學習提示技巧",
+        "探索應用場景",
+        "注意倫理邊界"
+      ]
+    }
+  },
+  "difficulty_explanations": {
+    "1": {
+      "label": "入門",
+      "approach": "從定義開始，用簡單的語言理解概念",
+      "time_estimate": "5-10分鐘/概念",
+      "advice": "不要急於求成，打好基礎最重要"
+    },
+    "2": {
+      "label": "基礎",
+      "approach": "理解概念之間的關係，開始做簡單練習",
+      "time_estimate": "10-15分鐘/概念",
+      "advice": "多做練習，錯題是最好的老師"
+    },
+    "3": {
+      "label": "中級",
+      "approach": "學習應用場景，能夠選擇合適的解決方案",
+      "time_estimate": "15-20分鐘/概念",
+      "advice": "嘗試實際操作，理論結合實踐"
+    },
+    "4": {
+      "label": "進階",
+      "approach": "處理複雜情境，理解邊界情況和最佳實踐",
+      "time_estimate": "20-30分鐘/概念",
+      "advice": "深入思考為什麼，而不只是是什麼"
+    },
+    "5": {
+      "label": "專家",
+      "approach": "綜合多個概念解決複雜問題，能夠設計架構",
+      "time_estimate": "30+分鐘/概念",
+      "advice": "嘗試教導別人，教學相長"
+    }
+  }
+}

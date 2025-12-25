@@ -1,0 +1,100 @@
+{
+  "version": "1.0",
+  "author": "文科線織明",
+  "task": "L16",
+  "report_sections": {
+    "summary": {
+      "title": "考試總覽",
+      "template": "\n## 考試總覽\n\n| 項目 | 結果 |\n|:-----|-----:|\n| 總題數 | {total_questions} |\n| 答對題數 | {correct_count} |\n| 得分 | {score}% |\n| 及格標準 | {passing_score}% |\n| 結果 | {result} |\n| 作答時間 | {time_spent} 分鐘 |\n| 平均每題 | {avg_time} 秒 |\n"
+    },
+    "domain_analysis": {
+      "title": "領域分析",
+      "template": "\n## 領域表現\n\n{domain_table}\n\n### 強項領域\n{strong_domains}\n\n### 待加強領域\n{weak_domains}\n"
+    },
+    "difficulty_analysis": {
+      "title": "難度分析",
+      "template": "\n## 難度表現\n\n| 難度 | 題數 | 答對 | 正確率 |\n|:----:|-----:|-----:|-------:|\n{difficulty_rows}\n"
+    },
+    "time_analysis": {
+      "title": "時間分析",
+      "template": "\n## 時間分析\n\n- 總作答時間: {total_time} 分鐘\n- 最快答題: {fastest} 秒\n- 最慢答題: {slowest} 秒\n- 超時題目: {overtime_count} 題\n\n{time_recommendation}\n"
+    },
+    "wrong_questions": {
+      "title": "錯題回顧",
+      "template": "\n## 錯題回顧\n\n共 {wrong_count} 題答錯。\n\n{wrong_list}\n\n### 錯誤類型分析\n{error_type_analysis}\n"
+    },
+    "recommendations": {
+      "title": "學習建議",
+      "template": "\n## 學習建議\n\n### 立即行動\n{immediate_actions}\n\n### 短期目標 (1週內)\n{short_term_goals}\n\n### 準備度評估\n{readiness_assessment}\n"
+    }
+  },
+  "result_messages": {
+    "pass_excellent": {
+      "condition": "score >= 90",
+      "title": "🎉 優異通過！",
+      "message": "恭喜！你的表現非常出色，已經掌握了大部分知識點。",
+      "next_step": "可以挑戰更高難度，或準備報名正式考試。"
+    },
+    "pass_good": {
+      "condition": "score >= 80",
+      "title": "✅ 順利通過！",
+      "message": "做得好！你有紮實的基礎，只需要加強少數弱點。",
+      "next_step": "針對錯題進行複習，然後再做一次模擬考。"
+    },
+    "pass_close": {
+      "condition": "score >= passing",
+      "title": "✅ 剛好通過",
+      "message": "通過了！但還有進步空間，建議繼續加強。",
+      "next_step": "重點複習弱點領域，提高答題穩定度。"
+    },
+    "fail_close": {
+      "condition": "score >= passing - 10",
+      "title": "⚠️ 差一點就及格",
+      "message": "很接近了！不要灰心，再努力一下就能過關。",
+      "next_step": "分析錯題原因，針對性練習，3-5天後再試。"
+    },
+    "fail_need_work": {
+      "condition": "score >= passing - 20",
+      "title": "📚 需要更多練習",
+      "message": "還需要加強。建議系統性複習後再挑戰。",
+      "next_step": "花1-2週重新學習弱點領域，每天練習20題。"
+    },
+    "fail_start_over": {
+      "condition": "score < passing - 20",
+      "title": "🔄 建議重新學習",
+      "message": "基礎需要加強。不要急，從頭開始會更有效。",
+      "next_step": "從基礎概念開始重新學習，建議完成完整學習路徑。"
+    }
+  },
+  "chart_configs": {
+    "domain_radar": {
+      "type": "radar",
+      "description": "領域能力雷達圖",
+      "config": {
+        "min": 0,
+        "max": 100,
+        "fill": true
+      }
+    },
+    "difficulty_bar": {
+      "type": "bar",
+      "description": "難度分布柱狀圖",
+      "config": {
+        "colors": [
+          "#4CAF50",
+          "#8BC34A",
+          "#FFEB3B",
+          "#FF9800",
+          "#F44336"
+        ]
+      }
+    },
+    "time_line": {
+      "type": "line",
+      "description": "答題時間趨勢圖",
+      "config": {
+        "threshold_line": 60
+      }
+    }
+  }
+}

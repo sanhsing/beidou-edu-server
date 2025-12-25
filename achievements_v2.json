@@ -1,0 +1,241 @@
+{
+  "version": "1.0",
+  "author": "文科線織明",
+  "task": "L17",
+  "categories": {
+    "learning": {
+      "name": "學習成就",
+      "icon": "📚",
+      "achievements": [
+        {
+          "id": "first_question",
+          "name": "初試啼聲",
+          "desc": "完成第一題練習",
+          "points": 10,
+          "icon": "🐣"
+        },
+        {
+          "id": "ten_streak",
+          "name": "連續答對",
+          "desc": "連續答對10題",
+          "points": 50,
+          "icon": "🔥"
+        },
+        {
+          "id": "hundred_questions",
+          "name": "百題挑戰",
+          "desc": "累計完成100題",
+          "points": 100,
+          "icon": "💯"
+        },
+        {
+          "id": "thousand_questions",
+          "name": "千題達人",
+          "desc": "累計完成1000題",
+          "points": 500,
+          "icon": "🏆"
+        },
+        {
+          "id": "perfect_session",
+          "name": "完美練習",
+          "desc": "單次練習全部答對(10題以上)",
+          "points": 80,
+          "icon": "✨"
+        },
+        {
+          "id": "daily_learner",
+          "name": "每日學習",
+          "desc": "連續7天學習",
+          "points": 70,
+          "icon": "📅"
+        },
+        {
+          "id": "monthly_master",
+          "name": "月度達人",
+          "desc": "連續30天學習",
+          "points": 300,
+          "icon": "🌟"
+        }
+      ]
+    },
+    "mastery": {
+      "name": "精通成就",
+      "icon": "🎓",
+      "achievements": [
+        {
+          "id": "domain_master",
+          "name": "領域精通",
+          "desc": "某領域正確率達90%",
+          "points": 100,
+          "icon": "🎯"
+        },
+        {
+          "id": "all_domains",
+          "name": "全面發展",
+          "desc": "所有領域都有練習",
+          "points": 150,
+          "icon": "🌈"
+        },
+        {
+          "id": "weakness_conquered",
+          "name": "克服弱點",
+          "desc": "弱點領域提升20%",
+          "points": 120,
+          "icon": "💪"
+        },
+        {
+          "id": "exam_ready",
+          "name": "考試就緒",
+          "desc": "準備度達到80%",
+          "points": 200,
+          "icon": "🎓"
+        },
+        {
+          "id": "mock_pass",
+          "name": "模擬通過",
+          "desc": "模擬考達到及格分數",
+          "points": 150,
+          "icon": "✅"
+        },
+        {
+          "id": "mock_excellent",
+          "name": "模擬優秀",
+          "desc": "模擬考達到90分",
+          "points": 250,
+          "icon": "🏅"
+        }
+      ]
+    },
+    "review": {
+      "name": "複習成就",
+      "icon": "🔄",
+      "achievements": [
+        {
+          "id": "first_review",
+          "name": "開始複習",
+          "desc": "第一次複習錯題",
+          "points": 20,
+          "icon": "🔄"
+        },
+        {
+          "id": "ten_reviews",
+          "name": "複習達人",
+          "desc": "複習10道錯題",
+          "points": 50,
+          "icon": "📝"
+        },
+        {
+          "id": "wrong_mastered",
+          "name": "錯題掌握",
+          "desc": "5道錯題變掌握",
+          "points": 80,
+          "icon": "🎉"
+        },
+        {
+          "id": "empty_notebook",
+          "name": "清空錯題本",
+          "desc": "所有錯題都已掌握",
+          "points": 200,
+          "icon": "🧹"
+        },
+        {
+          "id": "sm2_master",
+          "name": "記憶大師",
+          "desc": "使用SM-2複習50題",
+          "points": 100,
+          "icon": "🧠"
+        }
+      ]
+    },
+    "special": {
+      "name": "特殊成就",
+      "icon": "⭐",
+      "achievements": [
+        {
+          "id": "early_bird",
+          "name": "早起學習",
+          "desc": "早上6點前開始學習",
+          "points": 30,
+          "icon": "🌅"
+        },
+        {
+          "id": "night_owl",
+          "name": "夜貓子",
+          "desc": "晚上11點後學習",
+          "points": 30,
+          "icon": "🦉"
+        },
+        {
+          "id": "weekend_warrior",
+          "name": "週末戰士",
+          "desc": "週末學習超過2小時",
+          "points": 50,
+          "icon": "⚔️"
+        },
+        {
+          "id": "speed_demon",
+          "name": "速度之星",
+          "desc": "平均答題時間低於30秒",
+          "points": 60,
+          "icon": "⚡"
+        },
+        {
+          "id": "comeback",
+          "name": "王者歸來",
+          "desc": "離開7天後回來學習",
+          "points": 40,
+          "icon": "👑"
+        }
+      ]
+    }
+  },
+  "levels": [
+    {
+      "level": 1,
+      "name": "新手",
+      "min_points": 0,
+      "icon": "🌱"
+    },
+    {
+      "level": 2,
+      "name": "學徒",
+      "min_points": 100,
+      "icon": "📖"
+    },
+    {
+      "level": 3,
+      "name": "進階者",
+      "min_points": 300,
+      "icon": "📚"
+    },
+    {
+      "level": 4,
+      "name": "專家",
+      "min_points": 600,
+      "icon": "🎓"
+    },
+    {
+      "level": 5,
+      "name": "大師",
+      "min_points": 1000,
+      "icon": "🏆"
+    },
+    {
+      "level": 6,
+      "name": "宗師",
+      "min_points": 2000,
+      "icon": "👑"
+    },
+    {
+      "level": 7,
+      "name": "傳奇",
+      "min_points": 5000,
+      "icon": "⭐"
+    }
+  ],
+  "notifications": {
+    "achievement_unlocked": "🎉 恭喜獲得成就「{name}」！+{points}分",
+    "level_up": "🆙 升級了！你現在是 {level} 等級！",
+    "close_to_achievement": "💡 再{remaining}就能獲得「{name}」成就！"
+  }
+}
